@@ -1,0 +1,9 @@
+import './normalize.test';
+import './google-auth.test';
+import './google-error.test';
+import './sheets.test';
+import './metrics.test';
+import './auth.test';
+import './lead-filter.test';
+import './http-json.test';
+console.log('all local unit tests passed');

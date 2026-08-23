@@ -1,0 +1,25 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth';
+import { fetchLeadById, parseLeadId } from '@/lib/sheets';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  if (!verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const { id } = await context.params;
+  if (!parseLeadId(id)) return NextResponse.json({ error: 'Invalid lead id.' }, { status: 400 });
+  try {
+    const lead = await fetchLeadById(id);
+    if (!lead) return NextResponse.json({ error: 'Lead not found.' }, { status: 404 });
+    return NextResponse.json(lead, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    const configuration = /not configured/i.test(message);
+    return NextResponse.json(
+      { error: configuration ? 'Dashboard data connection is not configured yet.' : 'Lead data is temporarily unavailable.' },
+      { status: 503 }
+    );
+  }
+}

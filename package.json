@@ -1,0 +1,23 @@
+{
+  "name": "owner-prospecting-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "ts-node --transpile-only -P tsconfig.test.json src/lib/run-tests.ts"
+  },
+  "dependencies": {
+    "next": "15.5.18",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "@types/react": "19.1.2",
+    "@types/react-dom": "19.1.2",
+    "typescript": "5.8.3",
+    "ts-node": "10.9.2"
+  }
+}
