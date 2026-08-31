@@ -44,7 +44,7 @@ function missingFields(row: ProspectRow): MissingField[] {
 
 export function toRedactedLead(row: ProspectRow, now = new Date()): RedactedLead {
   const missing = missingFields(row); const badLead=isBadLead(row);
-  return { id:`${row.sourceKey}:${row.rowNumber}`, firstName:row.firstName, address:row.address, city:row.city, state:row.state, listingStatus:row.listingStatus,
+  return { id:`${row.sourceKey}:${row.rowNumber}`, firstName:row.firstName, address:row.address, city:row.city, state:row.state, county:row.county, listingStatus:row.listingStatus,
     sourceKey:row.sourceKey, sourceLabel:row.sourceLabel, dripStep:row.dripStep, lastSentAt:row.lastSentAt?.toISOString() ?? null,
     nextSendAt:row.nextSendAt?.toISOString() ?? null, stopped:isStopped(row), outcome:row.status2, variant:row.variant, disposition:row.disposition, badLead, dueNow:isDue(row,now), completed:isCompleted(row), missingDetails:missing.length>0, missingFields:missing };
 }
