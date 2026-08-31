@@ -75,7 +75,7 @@ export async function fetchAllSourceRows(): Promise<ProspectRow[]> {
 
 export async function fetchEmailActivityRows(): Promise<EmailActivityRow[]> {
   const sid = encodeURIComponent(spreadsheetId());
-  const range = encodeURIComponent(`'Email Activity'!A2:R`);
+  const range = encodeURIComponent(`'Email Activity'!A2:S`);
   const json = await googleJson(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`) as { values?: unknown[][] };
   return mapEmailActivityRows(json.values ?? [], 2);
 }
