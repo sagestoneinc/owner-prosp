@@ -46,6 +46,7 @@ export interface EmailActivityRow {
   openCount: number;
   trackingType: string;
   notes: string;
+  senderEmail: string;
 }
 
 export interface EmailTrackingMetrics {
@@ -54,6 +55,23 @@ export interface EmailTrackingMetrics {
   notOpened: number;
   trackedOpenRate: number;
   byVariant: Record<'A' | 'B', { emailsSent: number; trackedOpens: number; trackedOpenRate: number }>;
+}
+
+export interface PerformanceBreakdown {
+  emailsSent: number;
+  trackedOpens: number;
+  trackedOpenRate: number;
+  knownReplies: number;
+  knownReplyRate: number;
+}
+
+export interface SenderPerformance extends PerformanceBreakdown {
+  sender: string;
+}
+
+export interface DayOfWeekPerformance extends PerformanceBreakdown {
+  day: string;
+  dayIndex: number;
 }
 
 export interface RedactedLead {
@@ -109,6 +127,8 @@ export interface DashboardData {
   sequence: Array<{ step: number; label: string; count: number }>;
   sources: Array<{ sourceKey: SourceKey; label: string; total: number; withEmail: number; active: number; due: number; contacted: number; stopped: number }>;
   variants: Array<{ variant: string; prospects: number; contacted: number; knownReplies: number; knownReplyRate: number; emailsSent: number; trackedOpens: number; trackedOpenRate: number }>;
+  senderPerformance: SenderPerformance[];
+  dayOfWeekPerformance: DayOfWeekPerformance[];
   abReadout: string;
   upcoming: RedactedLead[];
   recent: RedactedLead[];
