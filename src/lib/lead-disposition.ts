@@ -12,7 +12,7 @@ export function validateDispositionPayload(input: unknown): { disposition: LeadD
 export function buildDispositionRange(sourceTitle: string, rowNumber: number, disposition: LeadDisposition) {
   if (!Number.isInteger(rowNumber) || rowNumber < 2) throw new Error('Invalid lead row.');
   const title = sourceTitle.replace(/'/g, "''");
-  return { range: `'${title}'!S${rowNumber}`, values: [[disposition]] };
+  return { range: `'${title}'!T${rowNumber}`, values: [[disposition]] };
 }
 
 export function isBadLeadDisposition(value: string | null | undefined): boolean {
