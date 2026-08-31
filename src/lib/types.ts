@@ -10,7 +10,7 @@ export interface PerformanceBreakdown { emailsSent:number; trackedOpens:number; 
 export interface SenderPerformance extends PerformanceBreakdown { sender:string; }
 export interface DayOfWeekPerformance extends PerformanceBreakdown { day:string; dayIndex:number; }
 export interface RedactedLead {
-  id:string; firstName:string; address:string; city:string; state:string; county:string; listingStatus:string; sourceKey:SourceKey; sourceLabel:string; dripStep:number; lastSentAt:string|null; nextSendAt:string|null; stopped:boolean; outcome:string; variant:string; disposition:string; badLead:boolean; dueNow:boolean; completed:boolean; missingDetails:boolean; missingFields:MissingField[];
+  id:string; firstName:string; address:string; city:string; state:string; county:string; listingStatus:string; sourceKey:SourceKey; sourceLabel:string; dripStep:number; lastSentAt:string|null; nextSendAt:string|null; stopped:boolean; outcome:string; variant:string; disposition:string; badLead:boolean; dueNow:boolean; completed:boolean; missingDetails:boolean; missingFields:MissingField[]; hasEmail:boolean;
 }
 export interface FullLead extends RedactedLead { mls:string; zipcode:string; currentPrice:string; ownerRaw:string; phone:string; emails:string[]; firstContact:string; }
 export interface DashboardData {
