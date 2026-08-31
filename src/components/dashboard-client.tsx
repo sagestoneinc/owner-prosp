@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { DashboardData, RedactedLead } from '@/lib/types';
+import type { DashboardData, DayOfWeekPerformance, RedactedLead, SenderPerformance } from '@/lib/types';
 import KpiCard from './kpi-card';
 import SequenceFunnel from './sequence-funnel';
 import SourceBreakdown from './source-breakdown';
@@ -17,6 +17,18 @@ function pct(value:number) { return `${(value*100).toFixed(1)}%`; }
 function ActivityList({ title, kicker, leads, timeField }: { title:string; kicker:string; leads:RedactedLead[]; timeField:'lastSentAt'|'nextSendAt' }) {
   return <section className="panel mini-panel"><div className="panel-header"><div><div className="section-kicker">{kicker}</div><h2>{title}</h2></div></div>
     <div className="activity-list">{leads.length ? leads.map(lead=><div className="activity-row" key={`${title}-${lead.id}`}><div><strong>{lead.firstName}</strong><span>{lead.address||'No address'} · {lead.sourceKey}</span></div><div className="activity-time">{fmtDate(lead[timeField])}</div></div>) : <div className="empty-state">Nothing to show yet.</div>}</div>
+  </section>;
+}
+function PerformanceTable({ title, kicker, rows, kind }: { title:string; kicker:string; rows:Array<SenderPerformance|DayOfWeekPerformance>; kind:'sender'|'day' }) {
+  const ordered = kind === 'day' ? [...rows].sort((a,b)=>(((a as DayOfWeekPerformance).dayIndex+6)%7)-(((b as DayOfWeekPerformance).dayIndex+6)%7)) : rows;
+  return <section className="panel"><div className="panel-header"><div><div className="section-kicker">{kicker}</div><h2>{title}</h2></div></div>
+    <div className="table-wrap"><table className="compact-table"><thead><tr><th>{kind==='sender'?'Sender':'Day'}</th><th>Sent</th><th>Opens</th><th>Open rate</th><th>Replies</th><th>Reply rate</th></tr></thead><tbody>
+      {ordered.length ? ordered.map(row=>{
+        const label = kind==='sender' ? (row as SenderPerformance).sender : (row as DayOfWeekPerformance).day;
+        return <tr key={`${kind}-${label}`}><td><strong>{label}</strong><small>{row.contactedProspects.toLocaleString()} attributed leads</small></td><td>{row.emailsSent.toLocaleString()}</td><td>{row.trackedOpens.toLocaleString()}</td><td>{pct(row.trackedOpenRate)}</td><td>{row.knownReplies.toLocaleString()}</td><td>{pct(row.knownReplyRate)}</td></tr>;
+      }) : <tr><td colSpan={6}><div className="empty-state">Performance data will appear after tracked campaign sends are logged.</div></td></tr>}
+    </tbody></table></div>
+    <p className="panel-note subtle">{kind==='sender'?'Replies are attributed to the most recent tracked sender for each prospect.':'Reply rate is lead-level and grouped by the weekday of the prospect’s most recent send; it is not the timestamp of the reply itself.'}</p>
   </section>;
 }
 
@@ -45,6 +57,7 @@ export default function DashboardClient() {
         <KpiCard label="Data quality" value={(data.dataQuality.noEmail+data.dataQuality.malformedDates).toLocaleString()} hint={`${data.dataQuality.noEmail} no email · ${data.dataQuality.malformedDates} bad dates`} tone={data.dataQuality.malformedDates?'warn':'default'} />
       </section>
       <p className="tracking-disclaimer">Tracked opens are directional: Apple Mail Privacy Protection, image proxies, scanners, and image blocking can affect open counts. Replies are the stronger engagement signal.</p>
+      <div className="two-col"><PerformanceTable title="Sender performance" kicker="MAILBOX HEALTH" rows={data.senderPerformance} kind="sender"/><PerformanceTable title="Day-of-week performance" kicker="SEND TIMING" rows={data.dayOfWeekPerformance} kind="day"/></div>
       <div className="two-col"><SequenceFunnel sequence={data.sequence}/><SourceBreakdown sources={data.sources}/></div>
       <div className="two-col"><VariantPanel variants={data.variants} readout={data.abReadout}/><div className="stacked-panels"><ActivityList title="Upcoming sends" kicker="NEXT IN QUEUE" leads={data.upcoming} timeField="nextSendAt"/><ActivityList title="Recent activity" kicker="LATEST SEND STATE" leads={data.recent} timeField="lastSentAt"/></div></div>
       <LeadTable leads={data.leads} onOpen={setOpenLead}/>
