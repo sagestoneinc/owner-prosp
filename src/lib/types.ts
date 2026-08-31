@@ -26,6 +26,36 @@ export interface ProspectRow {
   malformedDateCount: number;
 }
 
+export interface EmailActivityRow {
+  rowNumber: number;
+  trackingId: string;
+  source: string;
+  sourceRow: number;
+  mls: string;
+  propertyAddress: string;
+  recipientEmail: string;
+  variant: string;
+  dripStep: number;
+  subject: string;
+  zohoMessageId: string;
+  sentAt: Date | null;
+  validationState: string;
+  opened: boolean;
+  firstOpenedAt: Date | null;
+  lastOpenedAt: Date | null;
+  openCount: number;
+  trackingType: string;
+  notes: string;
+}
+
+export interface EmailTrackingMetrics {
+  emailsSent: number;
+  trackedOpens: number;
+  notOpened: number;
+  trackedOpenRate: number;
+  byVariant: Record<'A' | 'B', { emailsSent: number; trackedOpens: number; trackedOpenRate: number }>;
+}
+
 export interface RedactedLead {
   id: string;
   firstName: string;
@@ -70,10 +100,15 @@ export interface DashboardData {
     completed: number;
     stopped: number;
     knownReplies: number;
+    emailsSent: number;
+    trackedOpens: number;
+    trackedOpenRate: number;
+    notOpened: number;
+    knownReplyRate: number;
   };
   sequence: Array<{ step: number; label: string; count: number }>;
   sources: Array<{ sourceKey: SourceKey; label: string; total: number; withEmail: number; active: number; due: number; contacted: number; stopped: number }>;
-  variants: Array<{ variant: string; prospects: number; contacted: number; knownReplies: number; knownReplyRate: number }>;
+  variants: Array<{ variant: string; prospects: number; contacted: number; knownReplies: number; knownReplyRate: number; emailsSent: number; trackedOpens: number; trackedOpenRate: number }>;
   abReadout: string;
   upcoming: RedactedLead[];
   recent: RedactedLead[];

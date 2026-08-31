@@ -3,6 +3,8 @@ import './google-auth.test';
 import './google-error.test';
 import './sheets.test';
 import './metrics.test';
+import './email-activity.test';
+import './tracking.test';
 import './auth.test';
 import './lead-filter.test';
 import './http-json.test';
