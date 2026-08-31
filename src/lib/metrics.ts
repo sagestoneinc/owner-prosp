@@ -1,5 +1,6 @@
 import type { DashboardData, DayOfWeekPerformance, EmailActivityRow, MissingField, ProspectRow, RedactedLead, SenderPerformance, SourceKey } from './types';
 import { buildEmailTrackingMetrics } from './email-activity';
+import { isBadLeadDisposition } from './lead-disposition';
 
 export const DASHBOARD_TIMEZONE = 'America/New_York';
 
@@ -25,8 +26,9 @@ function weekStartKey(date: Date): string {
 function weekdayIndex(date: Date): number { const short = localDateParts(date).weekday; return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(short); }
 function isKnownReply(row: ProspectRow) { return REPLY_RE.test(row.status2 || ''); }
 function isCompleted(row: ProspectRow) { return row.dripStep >= 5; }
-function isStopped(row: ProspectRow) { if (isCompleted(row) && !STOP_REASON_RE.test(row.status2 || '')) return false; return /^yes$/i.test(row.stoppedRaw.trim()) || STOP_REASON_RE.test(row.status2 || ''); }
-function isActive(row: ProspectRow) { return row.emails.length > 0 && !isStopped(row) && !isCompleted(row); }
+function isBadLead(row: ProspectRow) { return isBadLeadDisposition(row.disposition); }
+function isStopped(row: ProspectRow) { if (isBadLead(row)) return false; if (isCompleted(row) && !STOP_REASON_RE.test(row.status2 || '')) return false; return /^yes$/i.test(row.stoppedRaw.trim()) || STOP_REASON_RE.test(row.status2 || ''); }
+function isActive(row: ProspectRow) { return !isBadLead(row) && row.emails.length > 0 && !isStopped(row) && !isCompleted(row); }
 function isDue(row: ProspectRow, now: Date) { return isActive(row) && (!row.nextSendAt || row.nextSendAt.getTime() <= now.getTime()); }
 function prospectKey(sourceKey: SourceKey, rowNumber: number) { return `${sourceKey}:${rowNumber}`; }
 function activitySourceKey(source: string): SourceKey | null { const value=source.trim().toLowerCase(); if(value.startsWith('expired'))return'expired'; if(value.startsWith('withdrawn')||value.startsWith('cancelled'))return'withdrawn'; if(value.startsWith('active'))return'active'; return null; }
@@ -41,10 +43,10 @@ function missingFields(row: ProspectRow): MissingField[] {
 }
 
 export function toRedactedLead(row: ProspectRow, now = new Date()): RedactedLead {
-  const missing = missingFields(row);
+  const missing = missingFields(row); const badLead=isBadLead(row);
   return { id:`${row.sourceKey}:${row.rowNumber}`, firstName:row.firstName, address:row.address, city:row.city, state:row.state, listingStatus:row.listingStatus,
     sourceKey:row.sourceKey, sourceLabel:row.sourceLabel, dripStep:row.dripStep, lastSentAt:row.lastSentAt?.toISOString() ?? null,
-    nextSendAt:row.nextSendAt?.toISOString() ?? null, stopped:isStopped(row), outcome:row.status2, variant:row.variant, dueNow:isDue(row,now), completed:isCompleted(row), missingDetails:missing.length>0, missingFields:missing };
+    nextSendAt:row.nextSendAt?.toISOString() ?? null, stopped:isStopped(row), outcome:row.status2, variant:row.variant, disposition:row.disposition, badLead, dueNow:isDue(row,now), completed:isCompleted(row), missingDetails:missing.length>0, missingFields:missing };
 }
 
 function abReadout(variants: DashboardData['variants']): string {
@@ -69,16 +71,16 @@ function buildDayOfWeekPerformance(rows: ProspectRow[], emailActivity: EmailActi
 }
 
 export function buildDashboardData(rows: ProspectRow[], now = new Date(), emailActivity: EmailActivityRow[] = []): DashboardData {
-  const tracking=buildEmailTrackingMetrics(emailActivity); const today=dateKey(now); const monday=weekStartKey(now);
-  const totalProspects=rows.length; const withEmail=rows.filter(r=>r.emails.length>0).length; const activeSequences=rows.filter(isActive).length; const dueNow=rows.filter(r=>isDue(r,now)).length;
-  const contactedRows=rows.filter(r=>r.lastSentAt||r.dripStep>0); const completed=rows.filter(isCompleted).length; const stopped=rows.filter(r=>isStopped(r)&&!isCompleted(r)).length; const knownReplies=rows.filter(isKnownReply).length;
-  const sentToday=rows.filter(r=>r.lastSentAt&&dateKey(r.lastSentAt)===today).length; const sentThisWeek=rows.filter(r=>{if(!r.lastSentAt)return false;const key=dateKey(r.lastSentAt);return key>=monday&&key<=today;}).length;
-  const sequence=Array.from({length:6},(_,step)=>({step,label:STEP_LABELS[step],count:rows.filter(r=>Math.min(Math.max(r.dripStep,0),5)===step).length}));
+  const tracking=buildEmailTrackingMetrics(emailActivity); const today=dateKey(now); const monday=weekStartKey(now); const actionableRows=rows.filter(r=>!isBadLead(r));
+  const totalProspects=rows.length; const withEmail=rows.filter(r=>r.emails.length>0).length; const activeSequences=actionableRows.filter(isActive).length; const dueNow=actionableRows.filter(r=>isDue(r,now)).length; const badLeads=rows.filter(isBadLead).length;
+  const contactedRows=actionableRows.filter(r=>r.lastSentAt||r.dripStep>0); const completed=actionableRows.filter(isCompleted).length; const stopped=actionableRows.filter(r=>isStopped(r)&&!isCompleted(r)).length; const knownReplies=actionableRows.filter(isKnownReply).length;
+  const sentToday=actionableRows.filter(r=>r.lastSentAt&&dateKey(r.lastSentAt)===today).length; const sentThisWeek=actionableRows.filter(r=>{if(!r.lastSentAt)return false;const key=dateKey(r.lastSentAt);return key>=monday&&key<=today;}).length;
+  const sequence=Array.from({length:6},(_,step)=>({step,label:STEP_LABELS[step],count:actionableRows.filter(r=>Math.min(Math.max(r.dripStep,0),5)===step).length}));
   const sourceDefs:Array<{key:SourceKey;label:string}>=[{key:'expired',label:'Expired Listings'},{key:'withdrawn',label:'Withdrawn & Cancelled'},{key:'active',label:'Active Listings'}];
-  const sources=sourceDefs.map(({key,label})=>{const subset=rows.filter(r=>r.sourceKey===key);return{sourceKey:key,label,total:subset.length,withEmail:subset.filter(r=>r.emails.length>0).length,active:subset.filter(isActive).length,due:subset.filter(r=>isDue(r,now)).length,contacted:subset.filter(r=>r.lastSentAt||r.dripStep>0).length,stopped:subset.filter(r=>isStopped(r)&&!isCompleted(r)).length};});
-  const variants=['A','B'].map(variant=>{const assigned=rows.filter(r=>(r.variant||'').trim().toUpperCase()===variant);const contacted=assigned.filter(r=>r.lastSentAt||r.dripStep>0);const replies=assigned.filter(isKnownReply).length;const t=tracking.byVariant[variant as'A'|'B'];return{variant,prospects:assigned.length,contacted:contacted.length,knownReplies:replies,knownReplyRate:contacted.length?replies/contacted.length:0,emailsSent:t.emailsSent,trackedOpens:t.trackedOpens,trackedOpenRate:t.trackedOpenRate};});
-  const senderPerformance=buildSenderPerformance(rows,emailActivity); const dayOfWeekPerformance=buildDayOfWeekPerformance(rows,emailActivity); const leads=rows.map(r=>toRedactedLead(r,now));
-  const upcoming=rows.filter(r=>isActive(r)&&r.nextSendAt&&r.nextSendAt.getTime()>=now.getTime()).sort((a,b)=>a.nextSendAt!.getTime()-b.nextSendAt!.getTime()).slice(0,15).map(r=>toRedactedLead(r,now));
+  const sources=sourceDefs.map(({key,label})=>{const subset=rows.filter(r=>r.sourceKey===key);const actionable=subset.filter(r=>!isBadLead(r));return{sourceKey:key,label,total:subset.length,withEmail:subset.filter(r=>r.emails.length>0).length,active:actionable.filter(isActive).length,due:actionable.filter(r=>isDue(r,now)).length,contacted:actionable.filter(r=>r.lastSentAt||r.dripStep>0).length,stopped:actionable.filter(r=>isStopped(r)&&!isCompleted(r)).length};});
+  const variants=['A','B'].map(variant=>{const assigned=actionableRows.filter(r=>(r.variant||'').trim().toUpperCase()===variant);const contacted=assigned.filter(r=>r.lastSentAt||r.dripStep>0);const replies=assigned.filter(isKnownReply).length;const t=tracking.byVariant[variant as'A'|'B'];return{variant,prospects:assigned.length,contacted:contacted.length,knownReplies:replies,knownReplyRate:contacted.length?replies/contacted.length:0,emailsSent:t.emailsSent,trackedOpens:t.trackedOpens,trackedOpenRate:t.trackedOpenRate};});
+  const senderPerformance=buildSenderPerformance(actionableRows,emailActivity); const dayOfWeekPerformance=buildDayOfWeekPerformance(actionableRows,emailActivity); const leads=rows.map(r=>toRedactedLead(r,now));
+  const upcoming=actionableRows.filter(r=>isActive(r)&&r.nextSendAt&&r.nextSendAt.getTime()>=now.getTime()).sort((a,b)=>a.nextSendAt!.getTime()-b.nextSendAt!.getTime()).slice(0,15).map(r=>toRedactedLead(r,now));
   const recent=rows.filter(r=>!!r.lastSentAt).sort((a,b)=>b.lastSentAt!.getTime()-a.lastSentAt!.getTime()).slice(0,15).map(r=>toRedactedLead(r,now));
-  return {fetchedAt:now.toISOString(),timezone:DASHBOARD_TIMEZONE,headline:{totalProspects,withEmail,activeSequences,dueNow,sentToday,sentThisWeek,contacted:contactedRows.length,completed,stopped,knownReplies,emailsSent:tracking.emailsSent,trackedOpens:tracking.trackedOpens,trackedOpenRate:tracking.trackedOpenRate,notOpened:tracking.notOpened,knownReplyRate:contactedRows.length?knownReplies/contactedRows.length:0},sequence,sources,variants,senderPerformance,dayOfWeekPerformance,abReadout:abReadout(variants),upcoming,recent,leads,dataQuality:{noEmail:rows.filter(r=>r.emails.length===0).length,malformedDates:rows.reduce((sum,r)=>sum+r.malformedDateCount,0),companyOnlyOwners:rows.filter(r=>r.firstName==='Owner').length}};
+  return {fetchedAt:now.toISOString(),timezone:DASHBOARD_TIMEZONE,headline:{totalProspects,withEmail,activeSequences,dueNow,sentToday,sentThisWeek,contacted:contactedRows.length,completed,stopped,badLeads,knownReplies,emailsSent:tracking.emailsSent,trackedOpens:tracking.trackedOpens,trackedOpenRate:tracking.trackedOpenRate,notOpened:tracking.notOpened,knownReplyRate:contactedRows.length?knownReplies/contactedRows.length:0},sequence,sources,variants,senderPerformance,dayOfWeekPerformance,abReadout:abReadout(variants),upcoming,recent,leads,dataQuality:{noEmail:actionableRows.filter(r=>r.emails.length===0).length,malformedDates:rows.reduce((sum,r)=>sum+r.malformedDateCount,0),companyOnlyOwners:actionableRows.filter(r=>r.firstName==='Owner').length}};
 }
