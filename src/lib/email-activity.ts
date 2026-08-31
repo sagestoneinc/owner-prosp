@@ -1,6 +1,8 @@
 import { parseSheetDate } from './normalize';
 import type { EmailActivityRow, EmailTrackingMetrics } from './types';
 
+export const DEFAULT_SENDER_EMAIL = 'jess.seeto@jeselcura.me';
+
 function cell(row: unknown[], index: number): string {
   const value = row[index];
   return value == null ? '' : String(value).trim();
@@ -26,7 +28,8 @@ export function mapEmailActivityRows(values: unknown[][], startRow = 2): EmailAc
     lastOpenedAt: parseSheetDate(row[14]),
     openCount: Number.parseInt(cell(row, 15), 10) || 0,
     trackingType: cell(row, 16),
-    notes: cell(row, 17)
+    notes: cell(row, 17),
+    senderEmail: cell(row, 18).toLowerCase() || DEFAULT_SENDER_EMAIL
   })).filter(row => Boolean(row.trackingId || row.recipientEmail || row.zohoMessageId));
 }
 

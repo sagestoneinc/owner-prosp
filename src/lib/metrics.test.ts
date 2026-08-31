@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildDashboardData, toRedactedLead } from './metrics';
+import { mapEmailActivityRows } from './email-activity';
 import type { ProspectRow } from './types';
 
 const now = new Date('2026-08-23T14:00:00Z');
@@ -36,6 +37,23 @@ assert.equal(data.variants.find(x => x.variant === 'B')?.knownReplies, 1);
 assert.equal(data.dataQuality.noEmail, 1);
 assert.equal(data.dataQuality.malformedDates, 1);
 assert.equal(data.dataQuality.companyOnlyOwners, 1);
+
+const activity = mapEmailActivityRows([
+  ['trk-1','Expired','5','5001','500 Main St','one@example.com','A','1','Subject','z1','2026-08-22T10:00:00-04:00','deliverable','Yes','2026-08-22T10:05:00-04:00','2026-08-22T10:05:00-04:00','1','pixel','','jess.seeto@jeselcura.me'],
+  ['trk-2','Expired','5','5001','500 Main St','two@example.com','A','1','Subject','z2','2026-08-22T10:02:00-04:00','deliverable','','','','0','pixel','','jess.seeto@jeselcura.me'],
+  ['trk-3','Withdrawn','3','3001','300 Main St','three@example.com','B','2','Subject','z3','2026-08-23T10:00:00-04:00','deliverable','Yes','2026-08-23T10:03:00-04:00','2026-08-23T10:03:00-04:00','1','pixel','','second@seetorealty.com']
+]);
+const performance = buildDashboardData(rows, now, activity);
+assert.equal(performance.senderPerformance.length, 2);
+assert.equal(performance.senderPerformance.find(x => x.sender === 'jess.seeto@jeselcura.me')?.emailsSent, 2);
+assert.equal(performance.senderPerformance.find(x => x.sender === 'jess.seeto@jeselcura.me')?.trackedOpenRate, 0.5);
+assert.equal(performance.senderPerformance.find(x => x.sender === 'jess.seeto@jeselcura.me')?.knownReplies, 1);
+assert.equal(performance.senderPerformance.find(x => x.sender === 'second@seetorealty.com')?.emailsSent, 1);
+assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Saturday')?.emailsSent, 2);
+assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Saturday')?.trackedOpens, 1);
+assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Saturday')?.knownReplies, 1);
+assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Sunday')?.emailsSent, 1);
+assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Sunday')?.knownReplies, 0);
 
 const redacted = toRedactedLead(rows[1], now);
 const serialized = JSON.stringify(redacted);
