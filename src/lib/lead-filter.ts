@@ -1,12 +1,14 @@
 import type { RedactedLead, SourceKey } from './types';
 
 export type LeadFilterState = 'all' | 'active' | 'stopped' | 'completed' | 'due';
+export type LeadDetailsFilter = 'all' | 'missing' | 'complete';
 
 export interface LeadFilters {
   query: string;
   source: 'all' | SourceKey;
   step: 'all' | string;
   state: LeadFilterState;
+  details: LeadDetailsFilter;
 }
 
 export function filterLeads(leads: RedactedLead[], filters: LeadFilters): RedactedLead[] {
@@ -22,6 +24,8 @@ export function filterLeads(leads: RedactedLead[], filters: LeadFilters): Redact
     if (filters.state === 'stopped' && !lead.stopped) return false;
     if (filters.state === 'completed' && !lead.completed) return false;
     if (filters.state === 'due' && !lead.dueNow) return false;
+    if (filters.details === 'missing' && !lead.missingDetails) return false;
+    if (filters.details === 'complete' && lead.missingDetails) return false;
     return true;
   });
 }
