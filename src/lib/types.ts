@@ -61,6 +61,7 @@ export interface PerformanceBreakdown {
   emailsSent: number;
   trackedOpens: number;
   trackedOpenRate: number;
+  contactedProspects: number;
   knownReplies: number;
   knownReplyRate: number;
 }
