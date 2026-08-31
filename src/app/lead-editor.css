@@ -1,0 +1,19 @@
+.filters-five { grid-template-columns: minmax(240px,1fr) repeat(4,minmax(125px,170px)); }
+.needs-details, .complete-details { display:inline-flex; align-items:center; border-radius:999px; padding:4px 8px; font-size:10px; font-weight:800; white-space:nowrap; }
+.needs-details { background:#fff0e6; color:var(--warn); }
+.complete-details { background:#eef3ef; color:var(--good); }
+.drawer-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 16px; }
+.lead-edit-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.lead-edit-form label { display:grid; gap:6px; min-width:0; }
+.lead-edit-form label.wide { grid-column:1 / -1; }
+.lead-edit-form label > span { color:var(--muted); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }
+.lead-edit-form input, .lead-edit-form textarea { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; background:#fff; color:var(--ink); outline:none; font:inherit; resize:vertical; }
+.lead-edit-form input:focus, .lead-edit-form textarea:focus { border-color:var(--ox); box-shadow:0 0 0 3px rgba(110,20,35,.08); }
+.protected-note { margin:16px 0; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--paper); }
+.protected-note strong, .protected-note span { display:block; }
+.protected-note strong { font-size:12px; }
+.protected-note span { margin-top:4px; color:var(--muted); font-size:11px; line-height:1.5; }
+.drawer-edit-actions { position:sticky; bottom:-1px; display:flex; justify-content:flex-end; gap:8px; margin:18px -24px -24px; padding:14px 24px; border-top:1px solid var(--border); background:rgba(255,255,255,.96); backdrop-filter:blur(8px); }
+.success-state { color:var(--good); }
+@media (max-width:1050px){ .filters-five { grid-template-columns:1fr 1fr; } }
+@media (max-width:720px){ .filters-five { grid-template-columns:1fr; } .lead-edit-form { grid-template-columns:1fr; } .lead-edit-form label.wide { grid-column:auto; } .drawer-actions { align-items:flex-start; flex-direction:column; } .drawer-edit-actions { margin:18px -14px -18px; padding:12px 14px; } }
