@@ -47,9 +47,11 @@ const performance = buildDashboardData(rows, now, activity);
 assert.equal(performance.senderPerformance.length, 2);
 assert.equal(performance.senderPerformance.find(x => x.sender === 'jess.seeto@jeselcura.me')?.emailsSent, 2);
 assert.equal(performance.senderPerformance.find(x => x.sender === 'jess.seeto@jeselcura.me')?.trackedOpenRate, 0.5);
+assert.equal(performance.senderPerformance.find(x => x.sender === 'jess.seeto@jeselcura.me')?.knownReplies, 1);
 assert.equal(performance.senderPerformance.find(x => x.sender === 'second@seetorealty.com')?.emailsSent, 1);
 assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Saturday')?.emailsSent, 2);
 assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Saturday')?.trackedOpens, 1);
+assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Saturday')?.knownReplies, 1);
 assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Sunday')?.emailsSent, 1);
 assert.equal(performance.dayOfWeekPerformance.find(x => x.day === 'Sunday')?.knownReplies, 0);
 
