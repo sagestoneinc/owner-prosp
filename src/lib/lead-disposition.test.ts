@@ -5,7 +5,7 @@ assert.deepEqual(validateDispositionPayload({ disposition: 'Bad Lead' }), { disp
 assert.deepEqual(validateDispositionPayload({ disposition: '' }), { disposition: '' });
 assert.throws(() => validateDispositionPayload({ disposition: 'Delete' }), /Invalid lead disposition/);
 assert.throws(() => validateDispositionPayload({ disposition: 'Bad Lead', dripStep: '0' }), /Only disposition/);
-assert.deepEqual(buildDispositionRange('Expired Listings', 22, 'Bad Lead'), { range: "'Expired Listings'!S22", values: [['Bad Lead']] });
+assert.deepEqual(buildDispositionRange('Expired Listings', 22, 'Bad Lead'), { range: "'Expired Listings'!T22", values: [['Bad Lead']] });
 assert.equal(isBadLeadDisposition(' bad lead '), true);
 assert.equal(isBadLeadDisposition(''), false);
 console.log('lead disposition tests passed');
