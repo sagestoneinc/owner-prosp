@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import './lead-editor.css';
+import './workflow.css';
 
 export const metadata: Metadata = {
   title: 'Owner Prospecting Dashboard | Seeto Realty',
