@@ -3,60 +3,27 @@
 import { useEffect, useState } from 'react';
 import type { FullLead } from '@/lib/types';
 
-function fmtDate(value: string | null) {
-  if (!value) return '—';
-  return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value));
-}
+type FormState = { mls:string; address:string; city:string; state:string; zipcode:string; county:string; currentPrice:string; listingStatus:string; ownerRaw:string; phone:string; emails:string };
+function fmtDate(value:string|null){if(!value)return'—';return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value));}
+function toForm(lead:FullLead):FormState{return{mls:lead.mls,address:lead.address,city:lead.city,state:lead.state,zipcode:lead.zipcode,county:lead.county,currentPrice:lead.currentPrice,listingStatus:lead.listingStatus,ownerRaw:lead.ownerRaw,phone:lead.phone,emails:lead.emails.join('\n')}}
+const fields:Array<{key:keyof FormState;label:string;wide?:boolean;multi?:boolean}>=[
+  {key:'ownerRaw',label:'Owner name',wide:true},{key:'emails',label:'Email address(es)',wide:true,multi:true},{key:'phone',label:'Phone'},
+  {key:'mls',label:'MLS #'},{key:'address',label:'Property address',wide:true},{key:'city',label:'City'},{key:'state',label:'State'},{key:'zipcode',label:'ZIP code'},
+  {key:'county',label:'County'},{key:'currentPrice',label:'Current price'},{key:'listingStatus',label:'Listing status'}
+];
 
-export default function LeadDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const [lead, setLead] = useState<FullLead | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!id) { setLead(null); setError(''); return; }
-    const controller = new AbortController();
-    setLoading(true); setError(''); setLead(null);
-    fetch(`/api/leads/${encodeURIComponent(id)}`, { signal: controller.signal, cache: 'no-store' })
-      .then(async response => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Unable to load lead.');
-        return data as FullLead;
-      })
-      .then(setLead)
-      .catch(err => { if (err.name !== 'AbortError') setError(err.message || 'Unable to load lead.'); })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [id]);
-
-  if (!id) return null;
-  return (
-    <div className="drawer-backdrop" onMouseDown={e => { if (e.currentTarget === e.target) onClose(); }}>
-      <aside className="lead-drawer" role="dialog" aria-modal="true" aria-label="Lead details">
-        <div className="drawer-header">
-          <div><div className="section-kicker">FULL RECORD</div><h2>{lead?.firstName || 'Lead details'}</h2></div>
-          <button className="icon-button" onClick={onClose} aria-label="Close">×</button>
-        </div>
-        {loading ? <div className="drawer-state">Loading full record…</div> : null}
-        {error ? <div className="drawer-state error-state">{error}</div> : null}
-        {lead ? <div className="detail-grid">
-          <div className="detail-block wide"><span>Owner</span><strong>{lead.ownerRaw || '—'}</strong></div>
-          <div className="detail-block wide"><span>Property</span><strong>{lead.address || '—'}</strong><small>{[lead.city, lead.state, lead.zipcode].filter(Boolean).join(', ')}</small></div>
-          <div className="detail-block"><span>Email</span><strong>{lead.emails.length ? lead.emails.join('\n') : '—'}</strong></div>
-          <div className="detail-block"><span>Phone</span><strong>{lead.phone || '—'}</strong></div>
-          <div className="detail-block"><span>Source</span><strong>{lead.sourceLabel}</strong></div>
-          <div className="detail-block"><span>Listing status</span><strong>{lead.listingStatus || '—'}</strong></div>
-          <div className="detail-block"><span>MLS</span><strong>{lead.mls || '—'}</strong></div>
-          <div className="detail-block"><span>Current price</span><strong>{lead.currentPrice || '—'}</strong></div>
-          <div className="detail-block"><span>County</span><strong>{lead.county || '—'}</strong></div>
-          <div className="detail-block"><span>Variant</span><strong>{lead.variant || '—'}</strong></div>
-          <div className="detail-block"><span>Drip step</span><strong>{lead.dripStep}</strong></div>
-          <div className="detail-block"><span>Outcome</span><strong>{lead.outcome || (lead.stopped ? 'Stopped' : '—')}</strong></div>
-          <div className="detail-block"><span>Last sent</span><strong>{fmtDate(lead.lastSentAt)}</strong></div>
-          <div className="detail-block"><span>Next send</span><strong>{fmtDate(lead.nextSendAt)}</strong></div>
-          <div className="detail-block"><span>First contact</span><strong>{lead.firstContact || '—'}</strong></div>
-        </div> : null}
-      </aside>
-    </div>
-  );
+export default function LeadDrawer({id,onClose,onSaved}:{id:string|null;onClose:()=>void;onSaved?:()=>void}){
+  const [lead,setLead]=useState<FullLead|null>(null);const [form,setForm]=useState<FormState|null>(null);const [error,setError]=useState('');const [loading,setLoading]=useState(false);const [editing,setEditing]=useState(false);const [saving,setSaving]=useState(false);const [saved,setSaved]=useState('');
+  useEffect(()=>{if(!id){setLead(null);setForm(null);setError('');setEditing(false);return;}const controller=new AbortController();setLoading(true);setError('');setSaved('');setLead(null);setEditing(false);fetch(`/api/leads/${encodeURIComponent(id)}`,{signal:controller.signal,cache:'no-store'}).then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to load lead.');return data as FullLead;}).then(value=>{setLead(value);setForm(toForm(value));}).catch(err=>{if(err.name!=='AbortError')setError(err.message||'Unable to load lead.');}).finally(()=>setLoading(false));return()=>controller.abort();},[id]);
+  async function save(){if(!id||!form)return;setSaving(true);setError('');setSaved('');try{const response=await fetch(`/api/leads/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(form)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to save lead.');const fresh=data as FullLead;setLead(fresh);setForm(toForm(fresh));setEditing(false);setSaved('Changes saved.');onSaved?.();}catch(err){setError(err instanceof Error?err.message:'Unable to save lead.');}finally{setSaving(false);}}
+  if(!id)return null;
+  return <div className="drawer-backdrop" onMouseDown={e=>{if(e.currentTarget===e.target)onClose();}}><aside className="lead-drawer" role="dialog" aria-modal="true" aria-label="Lead details">
+    <div className="drawer-header"><div><div className="section-kicker">{editing?'EDIT EXISTING LEAD':'FULL RECORD'}</div><h2>{lead?.firstName||'Lead details'}</h2></div><button className="icon-button" onClick={onClose} aria-label="Close">×</button></div>
+    {loading?<div className="drawer-state">Loading full record…</div>:null}{error?<div className="drawer-state error-state">{error}</div>:null}{saved?<div className="drawer-state success-state">{saved}</div>:null}
+    {lead&&!editing?<><div className="drawer-actions"><button className="primary-button" onClick={()=>setEditing(true)}>Edit details</button>{lead.missingDetails?<span className="needs-details">Needs {lead.missingFields.join(', ')}</span>:<span className="complete-details">Details complete</span>}</div><div className="detail-grid">
+      <div className="detail-block wide"><span>Owner</span><strong>{lead.ownerRaw||'—'}</strong></div><div className="detail-block wide"><span>Property</span><strong>{lead.address||'—'}</strong><small>{[lead.city,lead.state,lead.zipcode].filter(Boolean).join(', ')}</small></div>
+      <div className="detail-block"><span>Email</span><strong>{lead.emails.length?lead.emails.join('\n'):'—'}</strong></div><div className="detail-block"><span>Phone</span><strong>{lead.phone||'—'}</strong></div><div className="detail-block"><span>Source</span><strong>{lead.sourceLabel}</strong></div><div className="detail-block"><span>Listing status</span><strong>{lead.listingStatus||'—'}</strong></div><div className="detail-block"><span>MLS</span><strong>{lead.mls||'—'}</strong></div><div className="detail-block"><span>Current price</span><strong>{lead.currentPrice||'—'}</strong></div><div className="detail-block"><span>County</span><strong>{lead.county||'—'}</strong></div><div className="detail-block"><span>Variant</span><strong>{lead.variant||'—'}</strong></div><div className="detail-block"><span>Drip step</span><strong>{lead.dripStep}</strong></div><div className="detail-block"><span>Outcome</span><strong>{lead.outcome||(lead.stopped?'Stopped':'—')}</strong></div><div className="detail-block"><span>Last sent</span><strong>{fmtDate(lead.lastSentAt)}</strong></div><div className="detail-block"><span>Next send</span><strong>{fmtDate(lead.nextSendAt)}</strong></div><div className="detail-block"><span>First contact</span><strong>{lead.firstContact||'—'}</strong></div>
+    </div></>:null}
+    {lead&&editing&&form?<><div className="lead-edit-form">{fields.map(field=><label className={field.wide?'wide':''} key={field.key}><span>{field.label}</span>{field.multi?<textarea rows={3} value={form[field.key]} onChange={e=>setForm({...form,[field.key]:e.target.value})}/>:<input value={form[field.key]} onChange={e=>setForm({...form,[field.key]:e.target.value})}/>}</label>)}</div><div className="protected-note"><strong>Campaign fields are protected.</strong><span>Drip step, send dates, stopped status, outcome, first contact and A/B variant cannot be changed here.</span></div><div className="drawer-edit-actions"><button className="secondary-button" disabled={saving} onClick={()=>{setEditing(false);setForm(toForm(lead));setError('');}}>Cancel</button><button className="primary-button" disabled={saving} onClick={()=>void save()}>{saving?'Saving…':'Save changes'}</button></div></>:null}
+  </aside></div>;
 }
