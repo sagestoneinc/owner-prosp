@@ -1,19 +1,36 @@
 import { normalizeEmailCell } from './normalize';
+import type { SourceKey } from './types';
 
 export interface LeadUpdatePayload {
-  mls?: string; address?: string; city?: string; state?: string; zipcode?: string; county?: string;
-  currentPrice?: string; listingStatus?: string; ownerRaw?: string; phone?: string; emails?: string;
+  mls?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipcode?: string;
+  county?: string;
+  currentPrice?: string;
+  listingStatus?: string;
+  ownerRaw?: string;
+  phone?: string;
+  emails?: string;
 }
 
-const FIELD_COLUMNS: Record<keyof LeadUpdatePayload, string> = {
-  mls:'A', address:'B', city:'C', state:'D', zipcode:'E', county:'F', currentPrice:'G', listingStatus:'H', ownerRaw:'I', phone:'J', emails:'K'
-};
+const COMMON_COLUMNS = {
+  mls: 'A', address: 'B', city: 'C', state: 'D', zipcode: 'E', county: 'F', currentPrice: 'G', listingStatus: 'H', ownerRaw: 'I'
+} as const;
 const MAX = 500;
+
+function columnFor(sourceKey: SourceKey, key: keyof LeadUpdatePayload): string {
+  if (key === 'phone') return sourceKey === 'active' ? 'R' : 'J';
+  if (key === 'emails') return sourceKey === 'active' ? 'J' : 'K';
+  return COMMON_COLUMNS[key as keyof typeof COMMON_COLUMNS];
+}
 
 export function validateLeadUpdatePayload(input: unknown): LeadUpdatePayload {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid update payload.');
   const raw = input as Record<string, unknown>;
-  for (const key of Object.keys(raw)) if (!(key in FIELD_COLUMNS)) throw new Error(`Field "${key}" cannot be edited.`);
+  const allowed = new Set(['mls','address','city','state','zipcode','county','currentPrice','listingStatus','ownerRaw','phone','emails']);
+  for (const key of Object.keys(raw)) if (!allowed.has(key)) throw new Error(`Field "${key}" cannot be edited.`);
   const out: LeadUpdatePayload = {};
   for (const key of Object.keys(raw) as Array<keyof LeadUpdatePayload>) {
     if (typeof raw[key] !== 'string') throw new Error(`${key} must be text.`);
@@ -26,16 +43,18 @@ export function validateLeadUpdatePayload(input: unknown): LeadUpdatePayload {
         if (!emails.length) throw new Error('Enter at least one valid email address.');
         out.emails = emails.join('\n');
       }
-    } else out[key] = value as never;
+    } else {
+      (out as Record<string, string>)[key] = value;
+    }
   }
   return out;
 }
 
-export function buildLeadUpdateRanges(sourceTitle: string, rowNumber: number, payload: LeadUpdatePayload) {
+export function buildLeadUpdateRanges(sourceKey: SourceKey, sourceTitle: string, rowNumber: number, payload: LeadUpdatePayload) {
   if (!Number.isInteger(rowNumber) || rowNumber < 2) throw new Error('Invalid lead row.');
   const title = sourceTitle.replace(/'/g, "''");
   return (Object.keys(payload) as Array<keyof LeadUpdatePayload>).map(key => ({
-    range: `'${title}'!${FIELD_COLUMNS[key]}${rowNumber}`,
+    range: `'${title}'!${columnFor(sourceKey, key)}${rowNumber}`,
     values: [[payload[key] ?? '']]
   }));
 }

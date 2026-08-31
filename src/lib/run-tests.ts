@@ -8,5 +8,6 @@ import './tracking.test';
 import './auth.test';
 import './lead-filter.test';
 import './lead-update.test';
+import './lead-disposition.test';
 import './http-json.test';
 console.log('all local unit tests passed');
