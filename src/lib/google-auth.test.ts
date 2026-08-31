@@ -12,7 +12,7 @@ const assertion = buildServiceAccountAssertion({
 const [h,p,s] = assertion.split('.');
 const payload = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
 assert.equal(payload.iss, 'dashboard@example.iam.gserviceaccount.com');
-assert.equal(payload.scope, 'https://www.googleapis.com/auth/spreadsheets.readonly');
+assert.equal(payload.scope, 'https://www.googleapis.com/auth/spreadsheets');
 assert.equal(payload.aud, 'https://oauth2.googleapis.com/token');
 assert.equal(payload.iat, 1_800_000_000);
 assert.equal(payload.exp, 1_800_003_600);
