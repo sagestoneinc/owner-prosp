@@ -6,6 +6,13 @@ import { validateLeadUpdatePayload } from '@/lib/lead-update';
 export const dynamic = 'force-dynamic';
 
 function authorized(request: NextRequest) { return verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value); }
+function leadDataError(message:string, fallback:string){
+  if(/not configured/i.test(message)) return {error:'Dashboard data connection is not configured yet.',status:503};
+  if(/missing required header|duplicate header/i.test(message)) return {error:message,status:409};
+  if(/Google Sheets request failed \(403\)/i.test(message)) return {error:'Google Sheets denied the update. Confirm the dashboard service account has Editor access to the spreadsheet.',status:503};
+  if(/Google Sheets request failed/i.test(message)) return {error:message,status:503};
+  return {error:fallback,status:503};
+}
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   if (!authorized(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -16,9 +23,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     if (!lead) return NextResponse.json({ error: 'Lead not found.' }, { status: 404 });
     return NextResponse.json(lead, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : '';
-    const configuration = /not configured/i.test(message);
-    return NextResponse.json({ error: configuration ? 'Dashboard data connection is not configured yet.' : 'Lead data is temporarily unavailable.' }, { status: 503 });
+    const problem=leadDataError(error instanceof Error?error.message:'','Lead data is temporarily unavailable.');
+    return NextResponse.json({error:problem.error},{status:problem.status});
   }
 }
 
@@ -34,8 +40,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     if (!lead) return NextResponse.json({ error: 'Lead not found.' }, { status: 404 });
     return NextResponse.json(lead, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : '';
-    const configuration = /not configured/i.test(message);
-    return NextResponse.json({ error: configuration ? 'Dashboard data connection is not configured yet.' : 'Lead update failed. Please try again.' }, { status: 503 });
+    const problem=leadDataError(error instanceof Error?error.message:'','Lead update failed. Please try again.');
+    return NextResponse.json({error:problem.error},{status:problem.status});
   }
 }
