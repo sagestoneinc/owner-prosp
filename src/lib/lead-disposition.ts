@@ -1,3 +1,5 @@
+import type { SheetSchema } from './sheet-schema';
+
 export type LeadDisposition = 'Bad Lead' | '';
 
 export function validateDispositionPayload(input: unknown): { disposition: LeadDisposition } {
@@ -9,10 +11,10 @@ export function validateDispositionPayload(input: unknown): { disposition: LeadD
   return { disposition: raw.disposition as LeadDisposition };
 }
 
-export function buildDispositionRange(sourceTitle: string, rowNumber: number, disposition: LeadDisposition) {
+export function buildDispositionRange(schema: SheetSchema, sourceTitle: string, rowNumber: number, disposition: LeadDisposition) {
   if (!Number.isInteger(rowNumber) || rowNumber < 2) throw new Error('Invalid lead row.');
   const title = sourceTitle.replace(/'/g, "''");
-  return { range: `'${title}'!T${rowNumber}`, values: [[disposition]] };
+  return { range: `'${title}'!${schema.columnOf('Lead Disposition')}${rowNumber}`, values: [[disposition]] };
 }
 
 export function isBadLeadDisposition(value: string | null | undefined): boolean {
