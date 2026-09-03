@@ -1,6 +1,7 @@
 import './normalize.test';
 import './google-auth.test';
 import './google-error.test';
+import './sheet-schema.test';
 import './sheets.test';
 import './metrics.test';
 import './email-activity.test';
