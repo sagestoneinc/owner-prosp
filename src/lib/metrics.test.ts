@@ -67,4 +67,18 @@ assert.ok(!serialized.includes('555-1111'));
 assert.ok(!serialized.includes('ownerRaw'));
 assert.equal(redacted.id, 'withdrawn:3');
 assert.equal(redacted.dueNow, false);
+// Streamlined automation writes outcomes to Lead Disposition, not Status 2.
+const v2 = buildDashboardData([
+  base({ rowNumber: 10, dripStep: 2, lastSentAt: new Date('2026-08-22T14:00:00Z'), stoppedRaw: 'Yes', variant: 'A', disposition: 'Replied' }),
+  base({ rowNumber: 11, dripStep: 5, lastSentAt: new Date('2026-08-22T14:00:00Z'), stoppedRaw: 'Yes', variant: 'A', disposition: 'Completed' }),
+  base({ rowNumber: 12, dripStep: 1, lastSentAt: new Date('2026-08-22T14:00:00Z'), variant: 'B', disposition: 'Not interested' }),
+  base({ rowNumber: 13, dripStep: 3, lastSentAt: new Date('2026-08-22T14:00:00Z'), variant: 'B', disposition: 'In sequence' })
+], now);
+assert.equal(v2.headline.knownReplies, 2);
+assert.equal(v2.headline.emailsSent, 11);
+assert.equal(v2.headline.completed, 1);
+assert.equal(v2.headline.stopped, 2);
+assert.equal(v2.headline.activeSequences, 1);
+assert.equal(v2.variants.find(x => x.variant === 'A')?.emailsSent, 7);
+assert.equal(v2.variants.find(x => x.variant === 'B')?.knownReplies, 1);
 console.log('metrics tests passed');
