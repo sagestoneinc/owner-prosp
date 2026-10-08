@@ -10,6 +10,9 @@ const STEP_LABELS: Record<number, string> = {
 };
 const STOP_REASON_RE = /(REPLIED|CONVERTED|UNSUBSCRIBED|UNSUBSCRIBE|STOP|DO NOT CONTACT|BOUNCED)/i;
 const REPLY_RE = /(REPLIED|CONVERTED)/i;
+// The streamlined Make automation (Oct 2026) records outcomes in Lead Disposition instead of Status 2.
+const REPLY_DISPOSITION_RE = /^(replied|interested|not interested)$/i;
+const STOP_DISPOSITION_RE = /^(replied|interested|not interested)$/i;
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as const;
 
 function localDateParts(date: Date) {
@@ -24,12 +27,13 @@ function weekStartKey(date: Date): string {
   localNoonUtc.setUTCDate(localNoonUtc.getUTCDate() + mondayOffset); return localNoonUtc.toISOString().slice(0,10);
 }
 function weekdayIndex(date: Date): number { const short = localDateParts(date).weekday; return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(short); }
-function isKnownReply(row: ProspectRow) { return REPLY_RE.test(row.status2 || ''); }
+function isKnownReply(row: ProspectRow) { return REPLY_RE.test(row.status2 || '') || REPLY_DISPOSITION_RE.test((row.disposition || '').trim()); }
 function isCompleted(row: ProspectRow) { return row.dripStep >= 5; }
 function isBadLead(row: ProspectRow) { return isBadLeadDisposition(row.disposition); }
-function isStopped(row: ProspectRow) { if (isBadLead(row)) return false; if (isCompleted(row) && !STOP_REASON_RE.test(row.status2 || '')) return false; return /^yes$/i.test(row.stoppedRaw.trim()) || STOP_REASON_RE.test(row.status2 || ''); }
+function isStopped(row: ProspectRow) { if (isBadLead(row)) return false; if (isCompleted(row) && !STOP_REASON_RE.test(row.status2 || '')) return false; return /^yes$/i.test(row.stoppedRaw.trim()) || STOP_REASON_RE.test(row.status2 || '') || STOP_DISPOSITION_RE.test((row.disposition || '').trim()); }
 function isActive(row: ProspectRow) { return !isBadLead(row) && row.emails.length > 0 && !isStopped(row) && !isCompleted(row); }
 function isDue(row: ProspectRow, now: Date) { return isActive(row) && (!row.nextSendAt || row.nextSendAt.getTime() <= now.getTime()); }
+function emailsSentFromSteps(subset: ProspectRow[]) { return subset.reduce((sum, r) => sum + Math.min(Math.max(r.dripStep, 0), 5), 0); }
 function prospectKey(sourceKey: SourceKey, rowNumber: number) { return `${sourceKey}:${rowNumber}`; }
 function activitySourceKey(source: string): SourceKey | null { const value=source.trim().toLowerCase(); if(value.startsWith('expired'))return'expired'; if(value.startsWith('withdrawn')||value.startsWith('cancelled'))return'withdrawn'; if(value.startsWith('active'))return'active'; return null; }
 function activityProspectKey(row: EmailActivityRow): string | null { const sourceKey=activitySourceKey(row.source); return sourceKey&&row.sourceRow>0?prospectKey(sourceKey,row.sourceRow):null; }
@@ -78,9 +82,9 @@ export function buildDashboardData(rows: ProspectRow[], now = new Date(), emailA
   const sequence=Array.from({length:6},(_,step)=>({step,label:STEP_LABELS[step],count:actionableRows.filter(r=>Math.min(Math.max(r.dripStep,0),5)===step).length}));
   const sourceDefs:Array<{key:SourceKey;label:string}>=[{key:'expired',label:'Expired Listings'},{key:'withdrawn',label:'Withdrawn & Cancelled'},{key:'active',label:'Active Listings'}];
   const sources=sourceDefs.map(({key,label})=>{const subset=rows.filter(r=>r.sourceKey===key);const actionable=subset.filter(r=>!isBadLead(r));return{sourceKey:key,label,total:subset.length,withEmail:subset.filter(r=>r.emails.length>0).length,active:actionable.filter(isActive).length,due:actionable.filter(r=>isDue(r,now)).length,contacted:actionable.filter(r=>r.lastSentAt||r.dripStep>0).length,stopped:actionable.filter(r=>isStopped(r)&&!isCompleted(r)).length};});
-  const variants=['A','B'].map(variant=>{const assigned=actionableRows.filter(r=>(r.variant||'').trim().toUpperCase()===variant);const contacted=assigned.filter(r=>r.lastSentAt||r.dripStep>0);const replies=assigned.filter(isKnownReply).length;const t=tracking.byVariant[variant as'A'|'B'];return{variant,prospects:assigned.length,contacted:contacted.length,knownReplies:replies,knownReplyRate:contacted.length?replies/contacted.length:0,emailsSent:t.emailsSent,trackedOpens:t.trackedOpens,trackedOpenRate:t.trackedOpenRate};});
+  const variants=['A','B'].map(variant=>{const assigned=actionableRows.filter(r=>(r.variant||'').trim().toUpperCase()===variant);const contacted=assigned.filter(r=>r.lastSentAt||r.dripStep>0);const replies=assigned.filter(isKnownReply).length;const t=tracking.byVariant[variant as'A'|'B'];return{variant,prospects:assigned.length,contacted:contacted.length,knownReplies:replies,knownReplyRate:contacted.length?replies/contacted.length:0,emailsSent:emailsSentFromSteps(assigned),trackedOpens:t.trackedOpens,trackedOpenRate:t.trackedOpenRate};});
   const senderPerformance=buildSenderPerformance(actionableRows,emailActivity); const dayOfWeekPerformance=buildDayOfWeekPerformance(actionableRows,emailActivity); const leads=rows.map(r=>toRedactedLead(r,now));
   const upcoming=actionableRows.filter(r=>isActive(r)&&r.nextSendAt&&r.nextSendAt.getTime()>=now.getTime()).sort((a,b)=>a.nextSendAt!.getTime()-b.nextSendAt!.getTime()).slice(0,15).map(r=>toRedactedLead(r,now));
   const recent=rows.filter(r=>!!r.lastSentAt).sort((a,b)=>b.lastSentAt!.getTime()-a.lastSentAt!.getTime()).slice(0,15).map(r=>toRedactedLead(r,now));
-  return {fetchedAt:now.toISOString(),timezone:DASHBOARD_TIMEZONE,headline:{totalProspects,withEmail,activeSequences,dueNow,sentToday,sentThisWeek,contacted:contactedRows.length,completed,stopped,badLeads,knownReplies,emailsSent:tracking.emailsSent,trackedOpens:tracking.trackedOpens,trackedOpenRate:tracking.trackedOpenRate,notOpened:tracking.notOpened,knownReplyRate:contactedRows.length?knownReplies/contactedRows.length:0},sequence,sources,variants,senderPerformance,dayOfWeekPerformance,abReadout:abReadout(variants),upcoming,recent,leads,dataQuality:{noEmail:actionableRows.filter(r=>r.emails.length===0).length,malformedDates:rows.reduce((sum,r)=>sum+r.malformedDateCount,0),companyOnlyOwners:actionableRows.filter(r=>r.firstName==='Owner').length}};
+  return {fetchedAt:now.toISOString(),timezone:DASHBOARD_TIMEZONE,headline:{totalProspects,withEmail,activeSequences,dueNow,sentToday,sentThisWeek,contacted:contactedRows.length,completed,stopped,badLeads,knownReplies,emailsSent:emailsSentFromSteps(rows),trackedOpens:tracking.trackedOpens,trackedOpenRate:tracking.trackedOpenRate,notOpened:tracking.notOpened,knownReplyRate:contactedRows.length?knownReplies/contactedRows.length:0},sequence,sources,variants,senderPerformance,dayOfWeekPerformance,abReadout:abReadout(variants),upcoming,recent,leads,dataQuality:{noEmail:actionableRows.filter(r=>r.emails.length===0).length,malformedDates:rows.reduce((sum,r)=>sum+r.malformedDateCount,0),companyOnlyOwners:actionableRows.filter(r=>r.firstName==='Owner').length}};
 }
