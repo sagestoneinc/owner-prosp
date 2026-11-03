@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-03
 **Owner:** Marketing & Sales
-**Scope:** Cold email outreach to the owners of Expired, Withdrawn & Cancelled, and Active MLS listings in the `Leads - Owner Prospecting Project` workbook. Make runs the sends through the Zoho Mail API, and the results show on the Seeto dashboard.
+**Scope:** Cold email outreach to the owners of Expired, Withdrawn & Cancelled, and Active MLS listings in the `Leads - Owner Prospecting Project` workbook, **plus an Agent Referral program for the listing agents on those properties** (the workbook's `Listing Agents` tab). Make runs the sends through the Zoho Mail API, and the results show on the Seeto dashboard.
 
 ---
 
@@ -17,6 +17,7 @@ What the codebase and current automation tell us:
 | A/B | Variant A/B in column R. The dashboard holds any verdict until each arm has about 300 contacted prospects. | Good guardrail. Keep it. |
 | Engagement signal | Open tracking was **turned off Oct 8, 2026**. Replies come from `Status 2` / `Lead Disposition`. | Correct for deliverability. But replies are now the *only* signal, and the reply check can suppress a send without writing a reason to the sheet. **Reply capture is the #1 measurement gap.** |
 | Disposition | The dashboard can only set `Bad Lead`. Make writes `Replied / Interested / Not interested`. | We have no taxonomy for *why* owners say no (already managed, wants to sell, wrong person), so we can't improve the copy. |
+| Listing agents | The workbook already has a `Listing Agents` tab, but no sequence targets it and the dashboard doesn't read it. | Every listing we can't email the owner about (Active, Withdrawn) still has an agent we *can* email. This is an untapped, compliant channel. |
 | Data quality | The dashboard counts no-email leads, company-only owners, and malformed dates. | No-email and LLC-owned leads are a separate opportunity (direct mail or phone, plus investor messaging). They aren't junk. |
 
 ## 2. Research findings that shape the plan
@@ -49,9 +50,13 @@ What the codebase and current automation tell us:
 - Keep the spam-complaint rate **under 0.1%** and never above 0.3%. Yahoo expects one-click unsubscribe (RFC 8058) requests to be honored within about 2 days ([Warmy](https://www.warmy.io/guides/google-yahoo-sender-requirements/), [Prospeo](https://prospeo.io/s/google-email-sender-guidelines)).
 - Turning off open-tracking pixels for cold outreach is widely recommended, and we already did it.
 
-## 3. Strategy in one paragraph
+## 3. Strategy
 
-Stop sending one generic sequence to everyone. **Segment by listing status and owner type.** Lead every first touch with a **free, address-specific "Rent vs. Re-list" estimate**, and make **booking a 15-minute call** the single next step. Protect the sending domain like an asset. Then measure the program by **positive replies → booked calls → signed management agreements**, not by opens or sends.
+Stop sending one generic sequence to everyone. **Segment by listing status and owner type.** Lead every first touch with a **free, address-specific "Rent vs. Re-list" estimate**, and make **booking a 15-minute call** the single next step. Protect the sending domain like an asset. Run it as a **two-sided program**:
+- Email the owner directly when the listing has ended (Expired, Cancelled).
+- Email the **listing agent** with a referral offer when the listing is still live (Active, Withdrawn). Agents become a referral channel instead of competitors: Seeto manages the rental, pays the agent's broker a referral fee, and sends the owner back to that agent when they're ready to sell.
+
+Then measure the program by **positive replies → booked calls → signed management agreements**, not by opens or sends.
 
 ## 4. Segments and messaging tracks
 
@@ -59,10 +64,11 @@ Stop sending one generic sequence to everyone. **Segment by listing status and o
 |---|---|---|---|---|
 | **T1 — Expired** | Expired Listings tab, ≤ 90 days since expiry | **Highest** | "The sale didn't happen. Here's what the home could earn while you decide." Empathetic, data-led, no blame on the prior agent. | Reply "estimate" or book a call for the Rent vs. Re-list sheet |
 | **T2 — Cancelled** | Cancelled rows in the Withdrawn & Cancelled tab, agreement ended | High | The same as T1, plus "you pulled it off the market for a reason. Renting keeps the option to sell later." | Same as T1 |
-| **T3 — Withdrawn (gated)** | Withdrawn rows | Gated | Hold until the listing-agreement end date passes, then move to T2. Until then, send only a general, non-property-specific newsletter, if the broker approves. | — |
-| **T4 — Active (gated)** | Active Listings tab | **Paused pending broker review** | If allowed, use only a "plan B for *after* your listing period" message. Never discuss terms or negotiate. Article 16 risk if our agents are REALTORS®. | Soft: "Save this for later" |
+| **T3 — Withdrawn (gated)** | Withdrawn rows | Gated | **No owner email.** Route to T7 (listing agent) now. Move the owner to T2 once the listing-agreement end date passes. | — |
+| **T4 — Active (gated)** | Active Listings tab | **Owner email paused pending broker review** | **No owner email.** Route to T7 (listing agent) instead. We work *with* the agent rather than soliciting their client, which avoids the Article 16 concern (broker to confirm). | — |
 | **T5 — Investor / LLC** | Entity owners (`Owner` fallback name, LLC/Trust/Holdings) | Medium–High | Portfolio language: cap rate, vacancy cost, owner reporting, maintenance network. Address "Hi there," not a fake first name. | Book a portfolio review |
 | **T6 — No-email** | `dataQuality.noEmail` rows | Medium | Not email: a postcard with a QR code to the rent estimate page, plus phone *after* a DNC scrub. | QR code → booking |
+| **T7 — Agent Referral** | Listing agents on Active and Withdrawn rows (and Expired rows where the agent is still in touch with the owner) | **High** | "If your seller can't get the price, don't lose the client. Refer them to us to lease and manage. We pay your broker a referral fee and hand the owner back to you when they sell." | Reply "referral" or book a 10-minute partner call |
 
 Add to every track: **Houston vs. DFW** localization (county column) and **price band**. Homes above about $500k get "premium tenant placement" language.
 
@@ -86,11 +92,65 @@ Rules for every email:
 
 Keep the dashboard's rule of about 300 contacted prospects per arm before calling a winner.
 
-## 6. Deliverability and infrastructure checklist
+## 6. Agent Referral program (T7)
+
+### 6.1 Why it works
+- Expired, stale, or price-reduced listings are a problem for the listing agent too. The agent risks losing the client to the next agent who calls when the listing expires.
+- A rental-management referral lets the agent keep the relationship and earn a fee now. It also protects their future listing: a managed rental often becomes a sale in 1–3 years.
+- National and Texas PM firms already run this model. Published examples include a flat **$500–$750** per signed management agreement, or **half a month's rent** ([PURE Property Management TX](https://tx.purepm.co/company/agent-referral-program/), [Real Property Management Gold](https://www.realpmgold.com/realtor-referrals), [Evernest](https://evernest.co/agents)).
+- It turns our **Active and Withdrawn** tabs from "do not touch" into a compliant pipeline.
+
+### 6.2 The offer (broker to finalize numbers)
+| Element | Recommendation |
+|---|---|
+| Referral fee | Flat **$500 per signed management agreement**, or 50% of the first month's leasing fee, whichever the broker prefers. Paid to the **agent's sponsoring broker** after the owner signs and the first tenant moves in. |
+| Client-return promise | Written into the referral agreement: Seeto will **not** list the property for sale. When the owner decides to sell, Seeto refers them back to the referring agent. Add a disclaimer in the management agreement that the owner is free to choose any agent to sell, which PURE uses. |
+| Speed promise | Rent estimate to the agent within **1 business day** of the referral, so the agent can present "plan B" to their seller with confidence. |
+| Transparency | The agent gets status updates: estimate sent, owner meeting held, agreement signed, tenant placed. |
+| Eligibility | The owner must not already be in Seeto's owner pipeline (avoids double-paying T1/T2 leads). The agent must hold an active license (Texas, or a broker licensed in another state). |
+
+### 6.3 Agent sequence (4 touches over 21 days, plain text, from a named Seeto PM lead)
+| Step | Day | Angle | Sample subject |
+|---|---|---|---|
+| 1 | 0 | **Keep the client.** Name the listing, offer the referral fee and the client-return promise. | "If {Street} doesn't sell — referral for you" |
+| 2 | 5 | **What your seller gets.** A sample Rent vs. Re-list sheet the agent can forward as-is. | "A one-pager you can send your seller" |
+| 3 | 12 | **Proof.** One case where an agent referred, earned the fee, and later relisted the home with the same owner. | "How {Agent first name or 'one agent'} kept a client after an expired listing" |
+| 4 | 21 | **Standing offer.** No more emails about this listing. Invite them to save Seeto as their rental partner for any future listing. | "Our standing referral offer" |
+
+Rules:
+- **One sequence per agent, not per listing.** Agents with several listings in the sheet get one email that names their properties, so we don't spam them.
+- When a listing expires mid-sequence, the agent sequence continues. The owner moves to T1 only after a **14-day hold**, so a referring agent gets first chance to make the introduction. Stop the owner track for any owner the agent refers.
+- Never contact the owner of a property the agent has said they will refer. Wait for the warm intro.
+
+### 6.4 Partner nurture (agents who say yes)
+- Add them to a **"Referral Partners"** list. Send a monthly 3-line email: rental market stats for their county plus their referral status.
+- Quarterly: a short lunch-and-learn or webinar, "Rent vs. Sell in a soft market," for partner agents and their brokerages.
+- Recognize top referrers by name (with permission) in the partner email.
+
+### 6.5 Compliance for the referral program
+- **Pay only license holders, through their broker.** TREC can discipline a license holder who pays any part of a fee to anyone other than a licensed Texas broker or a broker licensed in another state (TRELA §1101.652(b)(11)). Paying an unlicensed person for a referral is a violation ([TREC FAQ](https://www.trec.texas.gov/can-license-holder-be-disciplined-paying-commission-or-fee-or-dividing-commission-or-fee-unlicensed), [TREC FAQ](https://www.trec.texas.gov/node/470)). Pay the **sponsoring broker**, not the individual agent.
+- **Put it in writing.** Use a written referral agreement that names both license holders, the referred owner, the fee and when it's payable, and the term ([Texas A&M Real Estate Research Center](https://trerc.tamu.edu/article/understanding-real-estate-referrals-in-texas/)).
+- **Disclose the fee to the owner** in the management agreement, consistent with the broker's fiduciary duties.
+- **No owner negotiation through the agent's listing.** The referral covers leasing and management only. Seeto does not discuss selling or listing terms while the other broker's exclusive listing is in place (TREC §535.153).
+- **CAN-SPAM still applies.** Agent emails are commercial email, so the same footer rules apply: broker name, postal address, and opt-out. Agents who opt out go on the global suppression list.
+
+### 6.6 Agent KPIs
+| Metric | Initial target* |
+|---|---|
+| Agent positive reply rate (wants the referral terms) | 3–6% |
+| Agents who sign a referral agreement | ≥ 40% of positive replies |
+| Referred owners → signed management agreement | ≥ 35% |
+| Referral fees paid ÷ new doors from referrals | Tracks cost per door; compare against the owner-email cost per door |
+| Repeat partners (2+ referrals in 12 months) | Track from day 90 |
+
+*Assumptions. Re-baseline after 60 days.
+
+## 7. Deliverability and infrastructure checklist
 
 - [ ] Send cold outreach from a **dedicated secondary domain** (for example `seetorealtyhomes.com`), not the primary brokerage domain. The primary domain then handles warm replies.
 - [ ] SPF, DKIM (Zoho), and DMARC set to `p=quarantine` with aggregate reports, aligned for every sending domain.
 - [ ] Enroll in Google Postmaster Tools and Microsoft SNDS. Review complaint rates weekly.
+- [ ] Send agent referral emails (T7) from a **separate mailbox** from owner outreach, so one audience's complaints can't hurt the other.
 - [ ] Cap each mailbox at **30–40 cold sends per day**. Ramp new mailboxes over 3–4 weeks. Spread volume across 2–4 sender mailboxes (the dashboard already shows per-sender performance).
 - [ ] Keep Emailable validation before every first send. Suppress `undeliverable`, `risky`, and catch-all results unless the broker approves.
 - [ ] Add `List-Unsubscribe` + `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers. Route unsubscribes to a **global suppression list** shared across all three tabs, so an owner with multiple properties is suppressed everywhere.
@@ -98,7 +158,7 @@ Keep the dashboard's rule of about 300 contacted prospects per arm before callin
 - [ ] Keep open tracking **off**.
 - [ ] Bounce rate over 2% or complaints over 0.1% in any week → pause that mailbox and investigate.
 
-## 7. Measurement and the dashboard
+## 8. Measurement and the dashboard
 
 **North-star metric:** signed management agreements per 1,000 owners contacted.
 
@@ -118,21 +178,27 @@ Keep the dashboard's rule of about 300 contacted prospects per arm before callin
 
 `Interested` · `Call booked` · `Agreement signed` · `Already managed` · `Wants to sell (refer to listing agent)` · `Self-managing` · `Not interested` · `Wrong person` · `Unsubscribe` · `Bad Lead`
 
+Agent dispositions, in the `Listing Agents` tab:
+
+`Partner – interested` · `Referral agreement signed` · `Referred owner` · `Not now` · `Not interested` · `Unsubscribe`
+
 **Engineering backlog** for this repo (separate PRs):
 1. Extend the `Lead Disposition` validation (`src/lib/lead-disposition.ts`) and the stop/reply regexes (`src/lib/metrics.ts`) to the taxonomy above.
 2. Add a "Reply reasons" panel and a per-source funnel (contacted → interested → booked → signed).
 3. Add a "Speed to first touch" KPI, which needs a status-change date column in the sheet.
 4. Add a `Track` column (T1–T6) so the funnel and the A/B results can be filtered by segment.
 5. Show suppression-list and compliance gates (Active/Withdrawn paused) on the dashboard so nobody re-enables them by accident.
+6. Read the `Listing Agents` tab and add an **Agent Referral panel**: agents contacted → interested → agreements signed → owners referred → doors signed → referral fees owed or paid.
+7. Add a `Referred By` column on lead rows, so referred owners skip the owner cold sequence and the dashboard can attribute doors to partner agents.
 
-## 8. Multichannel follow-up (where email can't do it alone)
+## 9. Multichannel follow-up (where email can't do it alone)
 
 - **Positive reply → call within 1 business hour.** Speed is the conversion lever. Use a Cal.com 15-minute event type ("Rent vs. Re-list review") as the booking link.
 - **"Wants to sell" replies** → hand off to the Seeto listing side as a warm seller lead. This is a revenue win even if it isn't a PM win.
 - **No-email owners (T6)** → a monthly postcard batch with a QR code to a landing page with the rent-estimate form.
 - **Phone outreach** only after scrubbing against the National DNC Registry and confirming Texas telemarketing requirements with the broker.
 
-## 9. 30/60/90-day plan
+## 10. 30/60/90-day plan
 
 ### Days 0–30: Fix the foundation (no volume increase)
 - [ ] **Broker/compliance sign-off:** pause T4 (Active) and gate T3 (Withdrawn). Confirm the footer content (broker name, postal address, IABS/CPN links) and whether Seeto agents are NAR members.
@@ -141,22 +207,26 @@ Keep the dashboard's rule of about 300 contacted prospects per arm before callin
 - [ ] Make: write the reply taxonomy to `Lead Disposition` on *every* reply detection, including the just-in-time check that suppresses a send.
 - [ ] Build the Rent vs. Re-list one-pager template (rent comps, days on market, vacancy cost) and the booking page.
 - [ ] Rewrite the 5-step copy for T1/T2 and T5 (section 5). Have the broker review it.
+- [ ] **Agent Referral setup:** broker sets the fee. Draft the written referral agreement and the management-agreement disclosure, and write the 4-step agent copy (section 6). Clean the `Listing Agents` tab and de-duplicate it to one row per agent with their listings attached.
 
 ### Days 31–60: Relaunch T1/T2/T5 and measure
 - [ ] Relaunch Expired and Cancelled under the new copy at a capped volume (about 150–250 new owners per week across mailboxes).
 - [ ] Start A/B Test 1 (subject line) on Step 1.
 - [ ] SLA: positive replies get a call or personal reply within 1 business hour.
+- [ ] **Launch T7 Agent Referral** on Active and Withdrawn listings, about 50–100 new agents per week from a dedicated mailbox. Set up the 14-day owner hold when a listing expires.
 - [ ] Ship dashboard backlog items 1–2 (the reply taxonomy and reasons panel).
 - [ ] Hold a weekly 30-minute review covering deliverability health, reply reasons, and the copy changes queued from them.
 
 ### Days 61–90: Scale what works
 - [ ] Call A/B Test 1 once both arms reach about 300 contacted, then start Test 2 (CTA).
 - [ ] Add the T6 postcard channel and evaluate phone follow-up.
-- [ ] Revisit T3/T4 based on the broker's decision. If approved, launch a general "after your listing" track.
+- [ ] Revisit owner email for T3/T4 based on the broker's decision. Agents stay on T7 either way.
+- [ ] Start the Referral Partners nurture (section 6.4). Ship dashboard backlog items 6–7 (the Agent Referral panel and `Referred By`).
+- [ ] Compare cost per signed door: owner email vs. agent referral. Shift volume toward whichever is cheaper.
 - [ ] Re-baseline the KPI targets on 60 days of clean data. Set the Q1 2027 volume plan, adding mailboxes only if complaints stay < 0.1%.
 - [ ] Build a quarterly "{County} rental market update" for non-responders who gave consent, as a long-term nurture.
 
-## 10. Roles (RACI-lite)
+## 11. Roles (RACI-lite)
 
 | Workstream | Responsible | Approves |
 |---|---|---|
@@ -166,17 +236,20 @@ Keep the dashboard's rule of about 300 contacted prospects per arm before callin
 | Rent vs. Re-list sheets and booking calls | PM sales / leasing | PM lead |
 | Dashboard backlog | Engineering | Marketing |
 | Reply handling SLA | PM sales | PM lead |
+| Agent Referral program (agreements, partner nurture, fee payouts) | PM sales / partnerships | Broker/Owner |
 
-## 11. Open questions for the broker
+## 12. Open questions for the broker
 
 1. Are Seeto agents NAR members, so that Article 16 applies? That decides the fate of the Active tab.
 2. Do we have the listing-agreement end dates for Withdrawn rows?
 3. Which postal address and licensed broker name go in the footer?
 4. What are the published PM fees and guarantees we can state in Step 4 (leasing fee, monthly %, lease-up guarantee)?
 5. Do we have 2–3 real, shareable lease-up case studies for Step 3?
+6. **Agent Referral:** which fee structure (flat $ vs. % of leasing fee), when is it paid, and will the broker sign a "won't list it for sale" client-return commitment?
+7. Is the `Listing Agents` tab complete (name, email, brokerage, license number) for Active and Withdrawn rows?
 
 ---
 
-**Sources:** [Seeto Realty profile](https://www.provenexpert.com/seeto-realty/) · [TREC §535.153 (Cornell LII)](https://www.law.cornell.edu/regulations/texas/22-Tex-Admin-Code-SS-535-153) · [TREC FAQ](https://www.trec.texas.gov/node/360) · [NAR Article 16](https://www.nar.realtor/sites/default/files/policies/2012/code-of-ethics-article-16-2012-08-30.pdf) · [CandysDirt — Dallas rents](https://candysdirt.com/?p=429946) · [HAR — Houston rents](https://www.har.com/web/aubrielayne/blogs/143090) · [Point2Homes — Plano](https://www.point2homes.com/US/Average-Rent/TX/Plano.html) · [Red Sift — sender requirements](https://redsift.com/guides/bulk-email-sender-requirements) · [Warmy — Google/Yahoo rules](https://www.warmy.io/guides/google-yahoo-sender-requirements/) · [Hothawk — 2026 deliverability](https://hothawk.ai/blog/deliverability/email-deliverability-news-2026) · [gdprlocal — CAN-SPAM](https://gdprlocal.com/usa-e-mail-marketing-rules/) · [Arab MLS — MLS to PM clients](https://arabmls.org/converting-mls-listings-into-long-term-property-management-clients/) · [Luxury Presence — expired listings](https://www.luxurypresence.com/blogs/winning-over-expired-listings/) · [The Close — expired listings](https://theclose.com/how-to-get-expired-listings)
+**Sources:** [Seeto Realty profile](https://www.provenexpert.com/seeto-realty/) · [TREC §535.153 (Cornell LII)](https://www.law.cornell.edu/regulations/texas/22-Tex-Admin-Code-SS-535-153) · [TREC FAQ](https://www.trec.texas.gov/node/360) · [NAR Article 16](https://www.nar.realtor/sites/default/files/policies/2012/code-of-ethics-article-16-2012-08-30.pdf) · [CandysDirt — Dallas rents](https://candysdirt.com/?p=429946) · [HAR — Houston rents](https://www.har.com/web/aubrielayne/blogs/143090) · [Point2Homes — Plano](https://www.point2homes.com/US/Average-Rent/TX/Plano.html) · [Red Sift — sender requirements](https://redsift.com/guides/bulk-email-sender-requirements) · [Warmy — Google/Yahoo rules](https://www.warmy.io/guides/google-yahoo-sender-requirements/) · [Hothawk — 2026 deliverability](https://hothawk.ai/blog/deliverability/email-deliverability-news-2026) · [gdprlocal — CAN-SPAM](https://gdprlocal.com/usa-e-mail-marketing-rules/) · [Arab MLS — MLS to PM clients](https://arabmls.org/converting-mls-listings-into-long-term-property-management-clients/) · [Luxury Presence — expired listings](https://www.luxurypresence.com/blogs/winning-over-expired-listings/) · [The Close — expired listings](https://theclose.com/how-to-get-expired-listings) · [TREC — fees to unlicensed persons](https://www.trec.texas.gov/can-license-holder-be-disciplined-paying-commission-or-fee-or-dividing-commission-or-fee-unlicensed) · [TREC — cash to unlicensed referrers](https://www.trec.texas.gov/node/470) · [Texas A&M — referrals in Texas](https://trerc.tamu.edu/article/understanding-real-estate-referrals-in-texas/) · [PURE PM TX — agent referral program](https://tx.purepm.co/company/agent-referral-program/) · [Real Property Management Gold — realtor referrals](https://www.realpmgold.com/realtor-referrals) · [Evernest — agent referrals](https://evernest.co/agents)
 
-*This plan is marketing guidance, not legal advice. Have the broker of record confirm the compliance items in sections 2.3 and 11 before relaunch.*
+*This plan is marketing guidance, not legal advice. Have the broker of record confirm the compliance items in sections 2.3, 6.5 and 12 before relaunch.*
