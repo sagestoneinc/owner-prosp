@@ -2,13 +2,36 @@
 
 **Date:** 2026-11-03
 **Owner:** Marketing & Sales
-**Scope:** Cold email outreach to the owners of Expired, Withdrawn & Cancelled, and Active MLS listings in the `Leads - Owner Prospecting Project` workbook, **plus an Agent Referral program for the listing agents on those properties** (the workbook's `Listing Agents` tab). Make runs the sends through the Zoho Mail API, and the results show on the Seeto dashboard.
+**Scope:** Cold email outreach to the owners of Expired, Withdrawn & Cancelled, and Active MLS listings in the `Leads - Owner Prospecting Project` workbook, **plus an Agent Referral program for listing agents** (the workbook's `Listing Agents` tab). Make runs the sends through the Zoho Mail API, and the results show on the Seeto dashboard.
 
 ---
 
 ## 1. Where we are today
 
-What the codebase and current automation tell us:
+### 1.1 Live data snapshot (from the workbook, Nov 3, 2026 5:02 PM dashboard calc)
+
+| Metric | Expired | Withdrawn & Cancelled | Active | Total |
+|---|---|---|---|---|
+| Owner leads | 1,719 | 1,830 (≈1,790 Cancelled, ≈40 Withdrawn) | ≈3,085 rows | 6,600+ |
+| With email | 303 (17.6%) | 102 (5.6%) | not tracked | **405 of 3,549 (11.4%)** in Expired + W/C |
+| Contacted | 13 | 17 | — | **30** |
+| Active drip / Stopped or completed | 5 / 14 | 10 / 15 | — | 15 / 29 |
+| Variant A / B contacted | | | | 19 / 13 |
+
+Other data points:
+- **Drip distribution:** 375 not started, 4 at Step 1, 5 at Step 2, 5 at Step 3, 1 at Step 4, 15 completed.
+- **Exceptions:** 55 validation or skip flags. 305 leads have multiple emails.
+- **`Listing Agents` tab:** 1,000 rows. Every row is a **Closed** sale. The columns are MLS, Address, County, Price, Status, Listing Agent, Phone, Listing Office, Email, First Contact, Status 2.
+- **Active Listings tab:** the column B header is blank (`" "`) instead of `Address`. The Dashboard tab's formulas don't include Active at all, and the tab has no listing-agent columns.
+
+**What the numbers change:**
+1. **The bottleneck is data, not copy.** 88.6% of Expired and W/C owners have no email. Only about 375 emailable owners are left to start. At 2 mailboxes × 30 sends a day, the email pool runs out in about **2 weeks**. Getting contact data for the rest (section 9) is now the #1 priority, ahead of copy changes.
+2. **Cancelled is the biggest pool by far.** It has about 1,790 rows against about 40 Withdrawn. The T3 Withdrawn gate affects very few leads. T2 (Cancelled) deserves T1-level priority, but it also has the lowest email coverage (5.6%), so it needs enrichment first.
+3. **The A/B test can't reach a verdict on email volume alone.** 300 contacted per arm means about 600 owners, more than we have emails for. Pool A/B results across the owner tracks, or judge Step 1 tests on positive reply rate with a lower bar until enrichment adds volume.
+4. **The `Listing Agents` tab is a list of agents who just closed sales.** It isn't the agents on our owners' listings. That's ideal for *partner recruitment* (section 6, T7a). Property-specific referral asks (T7b) need listing-agent columns added to the Active and W/C exports.
+5. **The Active tab needs fixing before anything else runs on it.** It needs the `Address` header and a decision on whether it belongs on the dashboard. The web app validates headers by name, so a blank `Address` header makes the tab fail to load.
+
+### 1.2 What the codebase and current automation tell us
 
 | Area | Current state | Implication |
 |---|---|---|
@@ -17,7 +40,7 @@ What the codebase and current automation tell us:
 | A/B | Variant A/B in column R. The dashboard holds any verdict until each arm has about 300 contacted prospects. | Good guardrail. Keep it. |
 | Engagement signal | Open tracking was **turned off Oct 8, 2026**. Replies come from `Status 2` / `Lead Disposition`. | Correct for deliverability. But replies are now the *only* signal, and the reply check can suppress a send without writing a reason to the sheet. **Reply capture is the #1 measurement gap.** |
 | Disposition | The dashboard can only set `Bad Lead`. Make writes `Replied / Interested / Not interested`. | We have no taxonomy for *why* owners say no (already managed, wants to sell, wrong person), so we can't improve the copy. |
-| Listing agents | The workbook already has a `Listing Agents` tab, but no sequence targets it and the dashboard doesn't read it. | Every listing we can't email the owner about (Active, Withdrawn) still has an agent we *can* email. This is an untapped, compliant channel. |
+| Listing agents | The workbook has a `Listing Agents` tab (1,000 closed-sale rows), but no sequence targets it and the dashboard doesn't read it. | Recently closed agents are an untapped, compliant referral-partner channel. The listings we can't email the owner about (Active, Withdrawn) also have agents we *can* email, once their contact columns are added to those exports. |
 | Data quality | The dashboard counts no-email leads, company-only owners, and malformed dates. | No-email and LLC-owned leads are a separate opportunity (direct mail or phone, plus investor messaging). They aren't junk. |
 
 ## 2. Research findings that shape the plan
@@ -68,7 +91,8 @@ Then measure the program by **positive replies → booked calls → signed manag
 | **T4 — Active (gated)** | Active Listings tab | **Owner email paused pending broker review** | **No owner email.** Route to T7 (listing agent) instead. We work *with* the agent rather than soliciting their client, which avoids the Article 16 concern (broker to confirm). | — |
 | **T5 — Investor / LLC** | Entity owners (`Owner` fallback name, LLC/Trust/Holdings) | Medium–High | Portfolio language: cap rate, vacancy cost, owner reporting, maintenance network. Address "Hi there," not a fake first name. | Book a portfolio review |
 | **T6 — No-email** | `dataQuality.noEmail` rows | Medium | Not email: a postcard with a QR code to the rent estimate page, plus phone *after* a DNC scrub. | QR code → booking |
-| **T7 — Agent Referral** | Listing agents on Active and Withdrawn rows (and Expired rows where the agent is still in touch with the owner) | **High** | "If your seller can't get the price, don't lose the client. Refer them to us to lease and manage. We pay your broker a referral fee and hand the owner back to you when they sell." | Reply "referral" or book a 10-minute partner call |
+| **T7a — Agent partner recruitment** | The `Listing Agents` tab: 1,000 rows of agents with recent **closed** sales. De-duplicate to one row per agent. | **High (start here)** | "You close deals in {County}. When a seller can't get their price, or a buyer turns out to be an investor who needs a manager, send them to us. We pay your broker a referral fee and never compete for your listing." | Reply "referral" or book a 10-minute partner call |
+| **T7b — Property-specific referral** | Listing agents on Active and Withdrawn rows (and Expired rows where the agent is still in touch with the owner). **Needs agent name/email columns added to those exports.** | High (once data exists) | "If {Street} doesn't sell, don't lose the client. Refer them to us to lease and manage. We pay your broker a referral fee and hand the owner back to you when they sell." | Reply "referral" or book a 10-minute partner call |
 
 Add to every track: **Houston vs. DFW** localization (county column) and **price band**. Homes above about $500k get "premium tenant placement" language.
 
@@ -110,6 +134,9 @@ Keep the dashboard's rule of about 300 contacted prospects per arm before callin
 | Eligibility | The owner must not already be in Seeto's owner pipeline (avoids double-paying T1/T2 leads). The agent must hold an active license (Texas, or a broker licensed in another state). |
 
 ### 6.3 Agent sequence (4 touches over 21 days, plain text, from a named Seeto PM lead)
+
+The table below is written for **T7b** (a specific listing). For **T7a** (the closed-sale `Listing Agents` list), use the same 4 steps with a partnership opener instead of a property hook. For example, Step 1: "Congrats on closing {Street}. Quick idea for your next stale listing". Then reference their county and price band.
+
 | Step | Day | Angle | Sample subject |
 |---|---|---|---|
 | 1 | 0 | **Keep the client.** Name the listing, offer the referral fee and the client-return promise. | "If {Street} doesn't sell — referral for you" |
@@ -195,7 +222,9 @@ Agent dispositions, in the `Listing Agents` tab:
 
 - **Positive reply → call within 1 business hour.** Speed is the conversion lever. Use a Cal.com 15-minute event type ("Rent vs. Re-list review") as the booking link.
 - **"Wants to sell" replies** → hand off to the Seeto listing side as a warm seller lead. This is a revenue win even if it isn't a PM win.
-- **No-email owners (T6)** → a monthly postcard batch with a QR code to a landing page with the rent-estimate form.
+- **No-email owners (T6). This is now the majority: about 3,100 Expired and W/C owners, plus Active.**
+  - **Enrich first.** Skip-trace the highest-value no-email owners in batches of 250–500, starting with Expired from the last 90 days, then Cancelled, sorted by price. Run every new email through Emailable before it enters the drip. Record the data source and date per row.
+  - **Mail the rest.** A monthly postcard batch with a QR code to a landing page with the rent-estimate form.
 - **Phone outreach** only after scrubbing against the National DNC Registry and confirming Texas telemarketing requirements with the broker.
 
 ## 10. 30/60/90-day plan
@@ -207,13 +236,17 @@ Agent dispositions, in the `Listing Agents` tab:
 - [ ] Make: write the reply taxonomy to `Lead Disposition` on *every* reply detection, including the just-in-time check that suppresses a send.
 - [ ] Build the Rent vs. Re-list one-pager template (rent comps, days on market, vacancy cost) and the booking page.
 - [ ] Rewrite the 5-step copy for T1/T2 and T5 (section 5). Have the broker review it.
+- [ ] **Fix the workbook data:** restore the `Address` header in Active Listings column B. Decide whether Active goes on the Dashboard tab. Add listing-agent name/email/office columns to the Active and W/C exports so T7b can run.
+- [ ] **Run the first enrichment batch:** 500 no-email owners (Expired ≤ 90 days, then Cancelled by price), validated through Emailable. Target: double the emailable pool from 405 to 800+ by day 30.
 - [ ] **Agent Referral setup:** broker sets the fee. Draft the written referral agreement and the management-agreement disclosure, and write the 4-step agent copy (section 6). Clean the `Listing Agents` tab and de-duplicate it to one row per agent with their listings attached.
 
 ### Days 31–60: Relaunch T1/T2/T5 and measure
 - [ ] Relaunch Expired and Cancelled under the new copy at a capped volume (about 150–250 new owners per week across mailboxes).
 - [ ] Start A/B Test 1 (subject line) on Step 1.
 - [ ] SLA: positive replies get a call or personal reply within 1 business hour.
-- [ ] **Launch T7 Agent Referral** on Active and Withdrawn listings, about 50–100 new agents per week from a dedicated mailbox. Set up the 14-day owner hold when a listing expires.
+- [ ] **Launch T7a partner recruitment** to the de-duplicated `Listing Agents` list (1,000 closed-sale rows), about 50–100 new agents per week from a dedicated mailbox.
+- [ ] **Launch T7b** on Active and Withdrawn listings once the agent columns exist. Set up the 14-day owner hold when a listing expires.
+- [ ] Continue enrichment at about 500 owners every 2 weeks so the owner drip never runs dry.
 - [ ] Ship dashboard backlog items 1–2 (the reply taxonomy and reasons panel).
 - [ ] Hold a weekly 30-minute review covering deliverability health, reply reasons, and the copy changes queued from them.
 
@@ -246,7 +279,7 @@ Agent dispositions, in the `Listing Agents` tab:
 4. What are the published PM fees and guarantees we can state in Step 4 (leasing fee, monthly %, lease-up guarantee)?
 5. Do we have 2–3 real, shareable lease-up case studies for Step 3?
 6. **Agent Referral:** which fee structure (flat $ vs. % of leasing fee), when is it paid, and will the broker sign a "won't list it for sale" client-return commitment?
-7. Is the `Listing Agents` tab complete (name, email, brokerage, license number) for Active and Withdrawn rows?
+7. Can we add listing-agent name, email and office to the Active and Withdrawn & Cancelled exports? The current `Listing Agents` tab is closed sales only. Do we have a budget for skip tracing to raise owner email coverage above 11%?
 
 ---
 
