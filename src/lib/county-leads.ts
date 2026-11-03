@@ -43,9 +43,10 @@ export function filterCountyLeads(leads: RedactedLead[], options: { county:strin
     })
     .filter(lead => !query || `${lead.firstName} ${lead.address} ${lead.city} ${lead.state} ${lead.listingStatus}`.toLowerCase().includes(query))
     .sort((a,b) => {
-      if (options.sort === 'property') return (a.address || '').localeCompare(b.address || '') || a.firstName.localeCompare(b.firstName);
-      if (options.sort === 'status') return (a.listingStatus || '').localeCompare(b.listingStatus || '') || a.firstName.localeCompare(b.firstName);
-      if (options.sort === 'source') return a.sourceKey.localeCompare(b.sourceKey) || a.firstName.localeCompare(b.firstName);
-      return a.firstName.localeCompare(b.firstName) || (a.address || '').localeCompare(b.address || '');
+      // Final id tiebreak keeps ordering deterministic when names/addresses match.
+      if (options.sort === 'property') return (a.address || '').localeCompare(b.address || '') || a.firstName.localeCompare(b.firstName) || a.id.localeCompare(b.id);
+      if (options.sort === 'status') return (a.listingStatus || '').localeCompare(b.listingStatus || '') || a.firstName.localeCompare(b.firstName) || a.id.localeCompare(b.id);
+      if (options.sort === 'source') return a.sourceKey.localeCompare(b.sourceKey) || a.firstName.localeCompare(b.firstName) || a.id.localeCompare(b.id);
+      return a.firstName.localeCompare(b.firstName) || (a.address || '').localeCompare(b.address || '') || a.id.localeCompare(b.id);
     });
 }

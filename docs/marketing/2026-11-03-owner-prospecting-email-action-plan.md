@@ -22,14 +22,14 @@ Other data points:
 - **Drip distribution:** 375 not started, 4 at Step 1, 5 at Step 2, 5 at Step 3, 1 at Step 4, 15 completed.
 - **Exceptions:** 55 validation or skip flags. 305 leads have multiple emails.
 - **`Listing Agents` tab:** 1,000 rows. Every row is a **Closed** sale. The columns are MLS, Address, County, Price, Status, Listing Agent, Phone, Listing Office, Email, First Contact, Status 2.
-- **Active Listings tab:** the column B header is blank (`" "`) instead of `Address`. The Dashboard tab's formulas don't include Active at all, and the tab has no listing-agent columns.
+- **Active Listings tab:** the column B header read blank (`" "`) instead of `Address` on first check. It reads `Address` as of a re-check on Nov 3. The Dashboard tab's formulas don't include Active at all, and the tab has no listing-agent columns.
 
 **What the numbers change:**
 1. **The bottleneck is data, not copy.** 88.6% of Expired and W/C owners have no email. Only about 375 emailable owners are left to start. At 2 mailboxes × 30 sends a day, the email pool runs out in about **2 weeks**. Getting contact data for the rest (section 9) is now the #1 priority, ahead of copy changes.
 2. **Cancelled is the biggest pool by far.** It has about 1,790 rows against about 40 Withdrawn. The T3 Withdrawn gate affects very few leads. T2 (Cancelled) deserves T1-level priority, but it also has the lowest email coverage (5.6%), so it needs enrichment first.
 3. **The A/B test can't reach a verdict on email volume alone.** 300 contacted per arm means about 600 owners, more than we have emails for. Pool A/B results across the owner tracks, or judge Step 1 tests on positive reply rate with a lower bar until enrichment adds volume.
 4. **The `Listing Agents` tab is a list of agents who just closed sales.** It isn't the agents on our owners' listings. That's ideal for *partner recruitment* (section 6, T7a). Property-specific referral asks (T7b) need listing-agent columns added to the Active and W/C exports.
-5. **The Active tab needs fixing before anything else runs on it.** It needs the `Address` header and a decision on whether it belongs on the dashboard. The web app validates headers by name, so a blank `Address` header makes the tab fail to load.
+5. **The Active tab needs care before anything else runs on it.** Its `Address` header is now restored. The web app validates headers by name, and it now skips a broken tab with a warning instead of failing entirely. It still needs a decision on whether it belongs on the Dashboard tab, and it has no listing-agent columns.
 
 ### 1.2 What the codebase and current automation tell us
 
@@ -209,14 +209,15 @@ Agent dispositions, in the `Listing Agents` tab:
 
 `Partner – interested` · `Referral agreement signed` · `Referred owner` · `Not now` · `Not interested` · `Unsubscribe`
 
-**Engineering backlog** for this repo (separate PRs):
-1. Extend the `Lead Disposition` validation (`src/lib/lead-disposition.ts`) and the stop/reply regexes (`src/lib/metrics.ts`) to the taxonomy above.
-2. Add a "Reply reasons" panel and a per-source funnel (contacted → interested → booked → signed).
-3. Add a "Speed to first touch" KPI, which needs a status-change date column in the sheet.
-4. Add a `Track` column (T1–T6) so the funnel and the A/B results can be filtered by segment.
-5. Show suppression-list and compliance gates (Active/Withdrawn paused) on the dashboard so nobody re-enables them by accident.
-6. Read the `Listing Agents` tab and add an **Agent Referral panel**: agents contacted → interested → agreements signed → owners referred → doors signed → referral fees owed or paid.
-7. Add a `Referred By` column on lead rows, so referred owners skip the owner cold sequence and the dashboard can attribute doors to partner agents.
+**Engineering backlog** for this repo:
+1. ✅ **Shipped.** The `Lead Disposition` taxonomy. The lead drawer has a "Reply outcome" picker, and the API accepts every value above. Metrics classify each one as positive, reply, or unsubscribe (`src/lib/lead-disposition.ts`, `src/lib/metrics.ts`).
+2. ✅ **Shipped.** A "Reply reasons" panel and the outcome funnel: positive replies → calls booked → agreements signed, as headline KPIs.
+3. ⏳ **Open.** A "Speed to first touch" KPI. It needs a status-change date column in the sheet.
+4. ✅ **Shipped, without a sheet column.** Tracks T1–T6 are *derived* in code (`trackOf` in `src/lib/metrics.ts`), so no column has to be added or kept up to date by Make. An "Outreach tracks" panel shows leads, email, contacted, replies and positives per track.
+5. ✅ **Shipped.** Compliance gates on the dashboard. T3/T4 are flagged as owner-email gated. A "Needs attention" banner fires when any Withdrawn or Active owner is *due* for an owner email. **Make still has to stop those sends; the dashboard only reports them.** A global suppression list is still open.
+6. ✅ **Shipped, aggregates only.** The dashboard reads the `Listing Agents` tab and shows an **Agent Referral panel**: unique agents → with email → contacted → interested → referral agreements → owners referred. Agent outcomes go in that tab's `Status 2` column. No agent PII leaves the server. Fees owed or paid are still open.
+7. ⏳ **Open.** A `Referred By` column on lead rows. It needs a new sheet column and a matching Make change.
+8. ✅ **Shipped.** Resilience: a source tab with a broken header row (for example a blank `Address`) is now skipped with a warning, instead of taking the whole dashboard down.
 
 ## 9. Multichannel follow-up (where email can't do it alone)
 
@@ -236,7 +237,8 @@ Agent dispositions, in the `Listing Agents` tab:
 - [ ] Make: write the reply taxonomy to `Lead Disposition` on *every* reply detection, including the just-in-time check that suppresses a send.
 - [ ] Build the Rent vs. Re-list one-pager template (rent comps, days on market, vacancy cost) and the booking page.
 - [ ] Rewrite the 5-step copy for T1/T2 and T5 (section 5). Have the broker review it.
-- [ ] **Fix the workbook data:** restore the `Address` header in Active Listings column B. Decide whether Active goes on the Dashboard tab. Add listing-agent name/email/office columns to the Active and W/C exports so T7b can run.
+- [x] Restore the `Address` header in Active Listings column B. It reads correctly as of Nov 3.
+- [ ] **Fix the workbook data:** decide whether Active goes on the Dashboard tab. Add listing-agent name/email/office columns to the Active and W/C exports so T7b can run.
 - [ ] **Run the first enrichment batch:** 500 no-email owners (Expired ≤ 90 days, then Cancelled by price), validated through Emailable. Target: double the emailable pool from 405 to 800+ by day 30.
 - [ ] **Agent Referral setup:** broker sets the fee. Draft the written referral agreement and the management-agreement disclosure, and write the 4-step agent copy (section 6). Clean the `Listing Agents` tab and de-duplicate it to one row per agent with their listings attached.
 
@@ -247,14 +249,14 @@ Agent dispositions, in the `Listing Agents` tab:
 - [ ] **Launch T7a partner recruitment** to the de-duplicated `Listing Agents` list (1,000 closed-sale rows), about 50–100 new agents per week from a dedicated mailbox.
 - [ ] **Launch T7b** on Active and Withdrawn listings once the agent columns exist. Set up the 14-day owner hold when a listing expires.
 - [ ] Continue enrichment at about 500 owners every 2 weeks so the owner drip never runs dry.
-- [ ] Ship dashboard backlog items 1–2 (the reply taxonomy and reasons panel).
+- [x] Ship dashboard backlog items 1–2 (the reply taxonomy and reasons panel).
 - [ ] Hold a weekly 30-minute review covering deliverability health, reply reasons, and the copy changes queued from them.
 
 ### Days 61–90: Scale what works
 - [ ] Call A/B Test 1 once both arms reach about 300 contacted, then start Test 2 (CTA).
 - [ ] Add the T6 postcard channel and evaluate phone follow-up.
 - [ ] Revisit owner email for T3/T4 based on the broker's decision. Agents stay on T7 either way.
-- [ ] Start the Referral Partners nurture (section 6.4). Ship dashboard backlog items 6–7 (the Agent Referral panel and `Referred By`).
+- [ ] Start the Referral Partners nurture (section 6.4). Agent Referral panel (backlog item 6) is shipped. Add `Referred By` (item 7).
 - [ ] Compare cost per signed door: owner email vs. agent referral. Shift volume toward whichever is cheaper.
 - [ ] Re-baseline the KPI targets on 60 days of clean data. Set the Q1 2027 volume plan, adding mailboxes only if complaints stay < 0.1%.
 - [ ] Build a quarterly "{County} rental market update" for non-responders who gave consent, as a long-term nurture.

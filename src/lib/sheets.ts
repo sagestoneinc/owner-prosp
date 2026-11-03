@@ -1,7 +1,8 @@
 import { getGoogleAccessToken } from './google-auth';
 import { cleanAddress, displayFirstName, normalizeEmailCell, parseSheetDate } from './normalize';
 import { mapEmailActivityRows } from './email-activity';
-import type { EmailActivityRow, FullLead, ProspectRow, SourceKey } from './types';
+import type { AgentReferralSummary, EmailActivityRow, FullLead, ProspectRow, SourceKey } from './types';
+import { buildAgentReferralSummary, LISTING_AGENTS_TAB, mapAgentRows } from './agent-referral';
 import type { LeadUpdatePayload } from './lead-update';
 import { buildLeadUpdateRanges } from './lead-update';
 import type { LeadDisposition } from './lead-disposition';
@@ -54,12 +55,29 @@ async function fetchSourceSchema(sourceKey:SourceKey):Promise<SheetSchema>{
   return buildSheetSchema(SOURCE_TABS[sourceKey].title,json.values?.[0]??[]);
 }
 
-export async function fetchAllSourceRows():Promise<ProspectRow[]> {
+/**
+ * Maps every source tab, skipping (and reporting) any tab whose headers are invalid so a
+ * single broken tab does not take the whole dashboard down.
+ */
+export function mapSourceRanges(keys:SourceKey[],ranges:Array<{values?:unknown[][]}>):{rows:ProspectRow[];warnings:string[]}{
+  const warnings:string[]=[]; const rows=keys.flatMap((key,i)=>{const values=ranges[i]?.values??[];try{return mapSheetRows(key,values.slice(1),2,values[0]??[]);}catch(error){warnings.push(`${SOURCE_TABS[key].title} was skipped: ${error instanceof Error?error.message:'invalid headers.'}`);return [];}});
+  return {rows,warnings};
+}
+
+export async function fetchSourceRowsWithWarnings():Promise<{rows:ProspectRow[];warnings:string[]}> {
   const id=encodeURIComponent(spreadsheetId()); const params=new URLSearchParams(); const keys=Object.keys(SOURCE_TABS) as SourceKey[];
   keys.forEach(key=>params.append('ranges',`'${SOURCE_TABS[key].title.replace(/'/g,"''")}'!A1:T`)); params.set('majorDimension','ROWS');params.set('valueRenderOption','FORMATTED_VALUE');params.set('dateTimeRenderOption','FORMATTED_STRING');
-  const json=await googleJson(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values:batchGet?${params.toString()}`) as {valueRanges?:Array<{values?:unknown[][]}>}; const ranges=json.valueRanges??[];
-  return keys.flatMap((key,i)=>{const values=ranges[i]?.values??[];return mapSheetRows(key,values.slice(1),2,values[0]??[]);});
+  const json=await googleJson(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values:batchGet?${params.toString()}`) as {valueRanges?:Array<{values?:unknown[][]}>};
+  return mapSourceRanges(keys,json.valueRanges??[]);
 }
+
+/** Reads the Listing Agents tab and returns aggregate counts only (no agent PII leaves the server). */
+export async function fetchAgentReferralSummary():Promise<AgentReferralSummary> {
+  const sid=encodeURIComponent(spreadsheetId()); const range=encodeURIComponent(`'${LISTING_AGENTS_TAB}'!A1:K`);
+  const json=await googleJson(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`) as {values?:unknown[][]};
+  const values=json.values??[]; return buildAgentReferralSummary(mapAgentRows(values[0]??[],values.slice(1),2));
+}
+
 export async function fetchEmailActivityRows():Promise<EmailActivityRow[]> { const sid=encodeURIComponent(spreadsheetId()); const range=encodeURIComponent(`'Email Activity'!A2:S`); const json=await googleJson(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`) as {values?:unknown[][]}; return mapEmailActivityRows(json.values??[],2); }
 
 export async function fetchLeadById(id:string):Promise<FullLead|null> {

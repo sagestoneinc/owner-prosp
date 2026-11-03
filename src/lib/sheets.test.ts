@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mapSheetRows, parseLeadId } from './sheets';
+import { mapSheetRows, mapSourceRanges, parseLeadId } from './sheets';
 
 const headers = ['MLS #','Address','City','State','Zipcode','County','Current Price','Status','Owners Name','Phone Number','Email','First Contact','Status 2','Drip Step','Next Send At','Last Sent At','Stopped','Variant','Skip Reason','Lead Disposition'];
 const expiredValues = [
@@ -25,4 +25,10 @@ assert.equal(activeRows[0].variant, 'B');
 assert.deepEqual(parseLeadId('withdrawn:42'), { sourceKey: 'withdrawn', rowNumber: 42 });
 assert.equal(parseLeadId('other:42'), null);
 assert.equal(parseLeadId('active:1'), null);
+// A tab with a broken header row is skipped with a warning instead of failing every tab.
+const brokenHeaders = [...headers]; brokenHeaders[1] = ' ';
+const mixed = mapSourceRanges(['expired','active'], [{ values: [headers, ...expiredValues] }, { values: [brokenHeaders, ...movedValues] }]);
+assert.equal(mixed.rows.length, 2);
+assert.equal(mixed.warnings.length, 1);
+assert.match(mixed.warnings[0], /Active Listings was skipped: .*missing required header "Address"/);
 console.log('sheets mapping tests passed');
