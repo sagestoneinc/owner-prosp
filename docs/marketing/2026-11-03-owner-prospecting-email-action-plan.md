@@ -218,7 +218,9 @@ Agent dispositions, in the `Listing Agents` tab:
 6. ✅ **Shipped, aggregates only.** The dashboard reads the `Listing Agents` tab and shows an **Agent Referral panel**: unique agents → with email → contacted → interested → referral agreements → owners referred. Agent outcomes go in that tab's `Status 2` column. No agent PII leaves the server. Fees owed or paid are still open.
 7. ⏳ **Open.** A `Referred By` column on lead rows. It needs a new sheet column and a matching Make change.
 **Make automation check (Nov 4, read-only):** the live scenario is *LIVE v2 — Owner Prospecting — Streamlined*. It runs weekdays at 09:00 ET and reads only Expired and Withdrawn & Cancelled. **It never emails Active Listings owners, so the T4 gate already holds.** Its row filter skips `Stopped = Yes` and the dispositions Bad Lead, Replied, Interested, Not interested and Completed.
-- **Not yet handled in Make:** it does **not** exclude `Status = Withdrawn` (about 40 rows). Add `H ≠ Withdrawn` to the W/C filter, or stop those rows, to enforce the T3 gate.
+- **Withdrawn gate, done Nov 4 in the sheet:** Make's filter does not exclude `Status = Withdrawn`. All 40 Withdrawn rows (none of which had an email) were set to `Stopped = Yes`, with Skip Reason `Withdrawn: owner email gated (agent referral)`, so they stay excluded after enrichment.
+  - **Still open:** newly imported Withdrawn rows need the same treatment. The permanent fix is a one-condition edit in Make: add `H (Status) — Text not equal (case insensitive) — Withdrawn` to the *Due Withdrawn* filter in "LIVE v2 — Owner Prospecting — Streamlined".
+  - **When the gate lifts:** once a listing agreement ends, clear `Stopped` and the Skip Reason to move the row to T2.
 - **Handled by the dashboard:** the newer outcome values are not in Make's list, so the dashboard also writes `Stopped = Yes` whenever an outcome is saved. Any outcome therefore halts the drip with no Make change.
 
 8. ✅ **Shipped.** Resilience: a source tab with a broken header row (for example a blank `Address`) is now skipped with a warning, instead of taking the whole dashboard down.
