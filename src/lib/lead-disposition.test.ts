@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildDispositionRange, dispositionCategory, isBadLeadDisposition, isPositiveDisposition, isReplyDisposition, isStopDisposition, validateDispositionPayload } from './lead-disposition';
+import { buildDispositionRange, buildDispositionRanges, dispositionCategory, isBadLeadDisposition, isPositiveDisposition, isReplyDisposition, isStopDisposition, validateDispositionPayload } from './lead-disposition';
 import { buildSheetSchema } from './sheet-schema';
 
 const headers = ['MLS #','Address','City','State','Zipcode','County','Current Price','Status','Owners Name','Phone Number','Email','First Contact','Status 2','Drip Step','Next Send At','Last Sent At','Stopped','Variant','Skip Reason','Lead Disposition'];
@@ -28,4 +28,11 @@ assert.equal(isStopDisposition('Unsubscribe'), true);
 assert.equal(isStopDisposition('Completed'), false);
 assert.equal(isPositiveDisposition('call booked'), true);
 assert.equal(isPositiveDisposition('Not interested'), false);
+// Outcomes also set Stopped = Yes so the live Make filter (which honors Stopped) halts the drip.
+assert.deepEqual(buildDispositionRanges(schema, 'Expired Listings', 22, 'Unsubscribe'), [
+  { range: "'Expired Listings'!T22", values: [['Unsubscribe']] },
+  { range: "'Expired Listings'!Q22", values: [['Yes']] }
+]);
+assert.equal(buildDispositionRanges(schema, 'Expired Listings', 22, 'Bad Lead').length, 1);
+assert.equal(buildDispositionRanges(schema, 'Expired Listings', 22, '').length, 1);
 console.log('lead disposition tests passed');

@@ -217,6 +217,10 @@ Agent dispositions, in the `Listing Agents` tab:
 5. ✅ **Shipped.** Compliance gates on the dashboard. T3/T4 are flagged as owner-email gated. A "Needs attention" banner fires when any Withdrawn or Active owner is *due* for an owner email. **Make still has to stop those sends; the dashboard only reports them.** A global suppression list is still open.
 6. ✅ **Shipped, aggregates only.** The dashboard reads the `Listing Agents` tab and shows an **Agent Referral panel**: unique agents → with email → contacted → interested → referral agreements → owners referred. Agent outcomes go in that tab's `Status 2` column. No agent PII leaves the server. Fees owed or paid are still open.
 7. ⏳ **Open.** A `Referred By` column on lead rows. It needs a new sheet column and a matching Make change.
+**Make automation check (Nov 4, read-only):** the live scenario is *LIVE v2 — Owner Prospecting — Streamlined*. It runs weekdays at 09:00 ET and reads only Expired and Withdrawn & Cancelled. **It never emails Active Listings owners, so the T4 gate already holds.** Its row filter skips `Stopped = Yes` and the dispositions Bad Lead, Replied, Interested, Not interested and Completed.
+- **Not yet handled in Make:** it does **not** exclude `Status = Withdrawn` (about 40 rows). Add `H ≠ Withdrawn` to the W/C filter, or stop those rows, to enforce the T3 gate.
+- **Handled by the dashboard:** the newer outcome values are not in Make's list, so the dashboard also writes `Stopped = Yes` whenever an outcome is saved. Any outcome therefore halts the drip with no Make change.
+
 8. ✅ **Shipped.** Resilience: a source tab with a broken header row (for example a blank `Address`) is now skipped with a warning, instead of taking the whole dashboard down.
 
 ## 9. Multichannel follow-up (where email can't do it alone)

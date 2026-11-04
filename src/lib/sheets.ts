@@ -6,7 +6,7 @@ import { buildAgentReferralSummary, LISTING_AGENTS_TAB, mapAgentRows } from './a
 import type { LeadUpdatePayload } from './lead-update';
 import { buildLeadUpdateRanges } from './lead-update';
 import type { LeadDisposition } from './lead-disposition';
-import { buildDispositionRange } from './lead-disposition';
+import { buildDispositionRanges } from './lead-disposition';
 import { buildSheetSchema, REQUIRED_LEAD_HEADERS, type SheetSchema } from './sheet-schema';
 import { toRedactedLead } from './metrics';
 
@@ -95,6 +95,6 @@ export async function updateLeadDetails(id:string,payload:LeadUpdatePayload):Pro
 
 export async function updateLeadDisposition(id:string,disposition:LeadDisposition):Promise<FullLead|null> {
   const parsed=parseLeadId(id); if(!parsed)return null; const existing=await fetchLeadById(id); if(!existing)return null; const schema=await fetchSourceSchema(parsed.sourceKey);
-  const data=[buildDispositionRange(schema,SOURCE_TABS[parsed.sourceKey].title,parsed.rowNumber,disposition)]; const sid=encodeURIComponent(spreadsheetId());
+  const data=buildDispositionRanges(schema,SOURCE_TABS[parsed.sourceKey].title,parsed.rowNumber,disposition); const sid=encodeURIComponent(spreadsheetId());
   await googleJson(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data})}); return fetchLeadById(id);
 }

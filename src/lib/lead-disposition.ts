@@ -43,6 +43,21 @@ export function buildDispositionRange(schema: SheetSchema, sourceTitle: string, 
   return { range: `'${title}'!${schema.columnOf('Lead Disposition')}${rowNumber}`, values: [[disposition]] };
 }
 
+/**
+ * All sheet writes for a disposition change. Reply outcomes also set Stopped = "Yes":
+ * the live Make scenario only skips a fixed set of Lead Disposition values, but it always
+ * skips Stopped = Yes, so this guarantees no further drip email after any outcome.
+ * Clearing a disposition never re-enables sending (Stopped is left as-is).
+ */
+export function buildDispositionRanges(schema: SheetSchema, sourceTitle: string, rowNumber: number, disposition: LeadDisposition) {
+  const ranges: Array<{ range: string; values: string[][] }> = [buildDispositionRange(schema, sourceTitle, rowNumber, disposition)];
+  if (isStopDisposition(disposition)) {
+    const title = sourceTitle.replace(/'/g, "''");
+    ranges.push({ range: `'${title}'!${schema.columnOf('Stopped')}${rowNumber}`, values: [['Yes']] });
+  }
+  return ranges;
+}
+
 export function isBadLeadDisposition(value: string | null | undefined): boolean {
   return (value || '').trim().toLowerCase() === 'bad lead';
 }
