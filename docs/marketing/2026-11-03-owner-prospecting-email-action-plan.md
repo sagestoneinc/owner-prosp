@@ -68,6 +68,21 @@ Other data points:
   ([gdprlocal summary](https://gdprlocal.com/usa-e-mail-marketing-rules/); per-email penalty figures are on [ftc.gov](https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business), so confirm current amounts there).
 - **TREC advertising rules:** include the broker's name as licensed in every message. Confirm with the broker whether the IABS and Consumer Protection Notice links should go in the email footer.
 
+### 2.3a Broker answers (Nov 5, 2026)
+- **Seeto agents are NAR members.** Article 16 applies, so Active-listing owners are **permanently off owner email** (T4). Active and Withdrawn listings are reached only through the listing agent (T7b). Expired and Cancelled owners (T1/T2) are fine to email, because no exclusive listing is in place.
+- **Broker of record:** Michael Seeto, Seeto Realty (Broker/Owner).
+- **Footer.** The live Make templates already include all of these:
+  - "Seeto Realty is a licensed Texas real estate brokerage"
+  - 700 W Spring Creek Pkwy #212, Plano, TX 75023 · (972) 509-7100
+  - links to TREC's Information About Brokerage Services and Consumer Protection Notice
+  - an unsubscribe link
+
+  Optional addition: "Michael Seeto, Broker". Before relying on the address, confirm it is current. HAR lists 1721 W. Plano Pkwy #101 (Plano) and 6588 Corporate Dr #368 (Houston) for the firm, while seetorealty.com lists Spring Creek. CAN-SPAM needs a valid postal address.
+- **From seetorealty.com, usable in copy:**
+  - Tenant screening standards: 580+ credit score, combined income of 3× rent, verifiable income and rental history, no evictions, no broken leases, no money owed to prior landlords, and a criminal background check. Use these in Step 4 ("what you get").
+  - Service areas: DFW (Plano, Frisco, McKinney, Allen, Dallas, Irving, and others; Collin and Denton counties) and Houston.
+  - No management fees or referral program are published yet. Those are still needed (questions 4 and 6).
+
 ### 2.4 Deliverability: the 2024–2026 sender rules are enforced
 - Google, Yahoo, and Microsoft (Microsoft since May 5, 2025) require **SPF, DKIM, and aligned DMARC**. They reject non-compliant bulk mail outright instead of just sending it to spam ([Red Sift](https://redsift.com/guides/bulk-email-sender-requirements), [Hothawk](https://hothawk.ai/blog/deliverability/email-deliverability-news-2026)).
 - Keep the spam-complaint rate **under 0.1%** and never above 0.3%. Yahoo expects one-click unsubscribe (RFC 8058) requests to be honored within about 2 days ([Warmy](https://www.warmy.io/guides/google-yahoo-sender-requirements/), [Prospeo](https://prospeo.io/s/google-email-sender-guidelines)).
@@ -88,13 +103,21 @@ Then measure the program by **positive replies → booked calls → signed manag
 | **T1 — Expired** | Expired Listings tab, ≤ 90 days since expiry | **Highest** | "The sale didn't happen. Here's what the home could earn while you decide." Empathetic, data-led, no blame on the prior agent. | Reply "estimate" or book a call for the Rent vs. Re-list sheet |
 | **T2 — Cancelled** | Cancelled rows in the Withdrawn & Cancelled tab, agreement ended | High | The same as T1, plus "you pulled it off the market for a reason. Renting keeps the option to sell later." | Same as T1 |
 | **T3 — Withdrawn (gated)** | Withdrawn rows | Gated | **No owner email.** Route to T7 (listing agent) now. Move the owner to T2 once the listing-agreement end date passes. | — |
-| **T4 — Active (gated)** | Active Listings tab | **Owner email paused pending broker review** | **No owner email.** Route to T7 (listing agent) instead. We work *with* the agent rather than soliciting their client, which avoids the Article 16 concern (broker to confirm). | — |
+| **T4 — Active (no owner email)** | Active Listings tab | **Owner email off. Seeto agents are NAR members, so Article 16 applies.** | **No owner email, ever, while listed.** Route to T7b (listing agent) instead. We work *with* the agent rather than soliciting their client. | — |
 | **T5 — Investor / LLC** | Entity owners (`Owner` fallback name, LLC/Trust/Holdings) | Medium–High | Portfolio language: cap rate, vacancy cost, owner reporting, maintenance network. Address "Hi there," not a fake first name. | Book a portfolio review |
 | **T6 — No-email** | `dataQuality.noEmail` rows | Medium | Not email: a postcard with a QR code to the rent estimate page, plus phone *after* a DNC scrub. | QR code → booking |
 | **T7a — Agent partner recruitment** | The `Listing Agents` tab: 1,000 rows of agents with recent **closed** sales. De-duplicate to one row per agent. | **High (start here)** | "You close deals in {County}. When a seller can't get their price, or a buyer turns out to be an investor who needs a manager, send them to us. We pay your broker a referral fee and never compete for your listing." | Reply "referral" or book a 10-minute partner call |
 | **T7b — Property-specific referral** | Listing agents on Active and Withdrawn rows (and Expired rows where the agent is still in touch with the owner). **Needs agent name/email columns added to those exports.** | High (once data exists) | "If {Street} doesn't sell, don't lose the client. Refer them to us to lease and manage. We pay your broker a referral fee and hand the owner back to you when they sell." | Reply "referral" or book a 10-minute partner call |
 
-Add to every track: **Houston vs. DFW** localization (county column) and **price band**. Homes above about $500k get "premium tenant placement" language.
+Add to every track: localization by county and **price band**. Homes above about $500k get "premium tenant placement" language.
+
+**County focus (live data, Expired + W/C).** The lead list is **entirely DFW**; Houston counties don't appear. Priorities:
+- **Core:** Collin 1,030 and Denton 783 (51% of leads, home turf near the Plano office). Start here.
+- **Next:** Dallas 579 and Tarrant 533.
+- **Ring:** Kaufman 176, Rockwall 115, Ellis 57, Johnson 46, Parker 36.
+- **Fringe, outside the published service cities:** Grayson 56, Hunt 50, Wise 21, Hood 19, Henderson 11, Cooke 8, and others. That's about 5% of leads. Enrich and email these last, or route them to an agent referral.
+
+The Houston office gets no leads from this pipeline today. Add a Houston MLS export (Harris, Fort Bend, Montgomery) if Houston management growth is a goal.
 
 ## 5. Sequence rewrite (keep the 5-touch / 28-day cadence)
 
@@ -281,9 +304,9 @@ Agent dispositions, in the `Listing Agents` tab:
 
 ## 12. Open questions for the broker
 
-1. Are Seeto agents NAR members, so that Article 16 applies? That decides the fate of the Active tab.
+1. ~~Are Seeto agents NAR members?~~ **Yes (Nov 5).** Active-listing owner email stays off, and those listings go to T7b.
 2. Do we have the listing-agreement end dates for Withdrawn rows?
-3. Which postal address and licensed broker name go in the footer?
+3. ~~Which broker name goes in the footer?~~ **Michael Seeto, Seeto Realty.** Still open: confirm the current office address. The website says 700 W Spring Creek Pkwy #212; HAR says 1721 W. Plano Pkwy #101.
 4. What are the published PM fees and guarantees we can state in Step 4 (leasing fee, monthly %, lease-up guarantee)?
 5. Do we have 2–3 real, shareable lease-up case studies for Step 3?
 6. **Agent Referral:** which fee structure (flat $ vs. % of leasing fee), when is it paid, and will the broker sign a "won't list it for sale" client-return commitment?
