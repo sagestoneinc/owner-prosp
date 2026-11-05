@@ -16,7 +16,7 @@ export default function VariantPanel({ variants, readout }: { variants: Dashboar
         ))}
       </div>
       <p className="panel-note">{readout}</p>
-      <p className="panel-note subtle">Opens are historical (tracking off since Oct 8, 2026). Replies count outcomes in Status 2 or Lead Disposition (Replied, Interested, Not interested).</p>
+      <p className="panel-note subtle">Opens are historical (tracking off since Oct 8, 2026). Replies count any logged owner response in Status 2 or Lead Disposition (for example Replied, Interested, Call booked, Already managed, Not interested). Unsubscribes are not replies.</p>
     </section>
   );
 }

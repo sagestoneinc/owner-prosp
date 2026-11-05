@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildDashboardData, toRedactedLead } from './metrics';
+import { buildDashboardData, toRedactedLead, trackOf } from './metrics';
 import { mapEmailActivityRows } from './email-activity';
 import type { ProspectRow } from './types';
 
@@ -81,4 +81,42 @@ assert.equal(v2.headline.stopped, 2);
 assert.equal(v2.headline.activeSequences, 1);
 assert.equal(v2.variants.find(x => x.variant === 'A')?.emailsSent, 7);
 assert.equal(v2.variants.find(x => x.variant === 'B')?.knownReplies, 1);
+
+// Action-plan tracks and compliance gates.
+assert.equal(trackOf(base({})), 'T1');
+assert.equal(trackOf(base({ sourceKey: 'withdrawn', listingStatus: 'Cancelled' })), 'T2');
+assert.equal(trackOf(base({ sourceKey: 'withdrawn', listingStatus: 'Withdrawn' })), 'T3');
+assert.equal(trackOf(base({ sourceKey: 'active', emails: [] })), 'T4');
+assert.equal(trackOf(base({ ownerRaw: 'ABC PROPERTIES LLC', firstName: 'Owner' })), 'T5');
+assert.equal(trackOf(base({ emails: [], ownerRaw: 'ABC PROPERTIES LLC', firstName: 'Owner' })), 'T6');
+assert.equal(toRedactedLead(base({ sourceKey: 'active' }), now).ownerEmailAllowed, false);
+assert.equal(data.tracks.find(t => t.track === 'T4')?.total, 1);
+assert.equal(data.tracks.find(t => t.track === 'T3')?.contacted, 1);
+assert.equal(data.compliance.gatedContacted, 2);
+assert.deepEqual(data.warnings, []);
+assert.equal(data.agents, null);
+
+// Outcome funnel and reply reasons.
+const outcomes = buildDashboardData([
+  base({ rowNumber: 20, dripStep: 1, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'Interested' }),
+  base({ rowNumber: 21, dripStep: 2, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'Call booked' }),
+  base({ rowNumber: 22, dripStep: 2, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'Agreement signed' }),
+  base({ rowNumber: 23, dripStep: 1, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'Already managed' }),
+  base({ rowNumber: 24, dripStep: 1, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'Unsubscribe' }),
+  base({ rowNumber: 25, dripStep: 1, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'Replied' }),
+  base({ rowNumber: 26, dripStep: 1, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'In sequence', nextSendAt: new Date('2026-08-23T13:00:00Z') }),
+  base({ rowNumber: 27, sourceKey: 'active', sourceLabel: 'Active Listings', dripStep: 1, lastSentAt: new Date('2026-08-20T14:00:00Z'), nextSendAt: new Date('2026-08-23T13:00:00Z') })
+], now, [], { agents: { listingRows: 3, uniqueAgents: 2, withEmail: 2, contacted: 1, interested: 1, agreementsSigned: 0, referredOwners: 0, unsubscribed: 0, multiListingAgents: 1, topCounties: [] }, warnings: ['x skipped'] });
+assert.equal(outcomes.headline.positiveReplies, 3);
+assert.equal(outcomes.headline.callsBooked, 2);
+assert.equal(outcomes.headline.agreementsSigned, 1);
+assert.equal(outcomes.headline.knownReplies, 5);
+assert.equal(outcomes.headline.stopped, 6);
+assert.equal(outcomes.headline.activeSequences, 2);
+assert.equal(outcomes.compliance.gatedDueNow, 1);
+assert.equal(outcomes.replyReasons.find(r => r.reason === 'Unsubscribe')?.count, 1);
+assert.equal(outcomes.replyReasons.find(r => r.reason === 'Replied (no reason logged)')?.count, 1);
+assert.equal(outcomes.replyReasons.length, 6);
+assert.equal(outcomes.agents?.uniqueAgents, 2);
+assert.deepEqual(outcomes.warnings, ['x skipped']);
 console.log('metrics tests passed');
