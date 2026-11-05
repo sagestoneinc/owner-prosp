@@ -51,7 +51,7 @@ export const TRACK_DEFS: Record<Track, { label: string; ownerEmailAllowed: boole
   T1: { label: 'Expired', ownerEmailAllowed: true, gate: null },
   T2: { label: 'Cancelled', ownerEmailAllowed: true, gate: null },
   T3: { label: 'Withdrawn', ownerEmailAllowed: false, gate: 'Owner email gated until the listing agreement ends. Route to agent referral.' },
-  T4: { label: 'Active listing', ownerEmailAllowed: false, gate: 'Owner email paused pending broker review. Route to agent referral.' },
+  T4: { label: 'Active listing', ownerEmailAllowed: false, gate: 'No owner email while listed (NAR Article 16). Route to agent referral.' },
   T5: { label: 'Investor / LLC owner', ownerEmailAllowed: true, gate: null },
   T6: { label: 'No email (enrich or mail)', ownerEmailAllowed: false, gate: 'No email on file. Enrich (skip trace) or use direct mail.' }
 };

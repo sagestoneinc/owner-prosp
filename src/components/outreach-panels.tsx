@@ -5,7 +5,7 @@ function plural(n: number, one: string, many: string) { return `${n.toLocaleStri
 
 export function DashboardWarnings({ warnings, compliance }: { warnings: string[]; compliance: DashboardData['compliance'] }) {
   const items = [...warnings];
-  if (compliance.gatedDueNow > 0) items.unshift(`${plural(compliance.gatedDueNow, 'Withdrawn or Active-listing owner is', 'Withdrawn or Active-listing owners are')} due for an owner email. The action plan pauses owner email on these tracks. Route them to agent referral and stop them in Make.`);
+  if (compliance.gatedDueNow > 0) items.unshift(`${plural(compliance.gatedDueNow, 'Withdrawn or Active-listing owner is', 'Withdrawn or Active-listing owners are')} due for an owner email. The plan keeps owner email off for these tracks. Route them to agent referral and stop them in Make.`);
   if (!items.length) return null;
   return <section className="setup-alert outreach-alert" role="status"><strong>Needs attention</strong><span>{items.map((item, i) => <span className="alert-line" key={i}>{item}</span>)}</span></section>;
 }
