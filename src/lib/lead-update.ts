@@ -47,7 +47,7 @@ export function validateLeadUpdatePayload(input: unknown): LeadUpdatePayload {
 export function buildLeadUpdateRanges(schema: SheetSchema, sourceTitle: string, rowNumber: number, payload: LeadUpdatePayload) {
   if (!Number.isInteger(rowNumber) || rowNumber < 2) throw new Error('Invalid lead row.');
   const title = sourceTitle.replace(/'/g, "''");
-  return (Object.keys(payload) as Array<keyof LeadUpdatePayload>).map(key => ({
+  return (Object.keys(payload) as Array<keyof LeadUpdatePayload>).filter(key => schema.has(FIELD_HEADERS[key])).map(key => ({
     range: `'${title}'!${schema.columnOf(FIELD_HEADERS[key])}${rowNumber}`,
     values: [[payload[key] ?? '']]
   }));
