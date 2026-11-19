@@ -24,7 +24,26 @@ Tabs:
 Canonical lead headers A:T:
 `MLS # | Address | City | State | Zipcode | County | Current Price | Status | Owners Name | Phone Number | Email | First Contact | Status 2 | Drip Step | Next Send At | Last Sent At | Stopped | Variant | Skip Reason | Lead Disposition`
 
-The app resolves these fields by header name and derives metrics from the Make tracking fields (`Status 2`, `Drip Step`, `Next Send At`, `Last Sent At`, `Stopped`, `Variant`).
+The app resolves these fields by header name and derives metrics from the Make tracking fields (`Status 2`, `Drip Step`, `Next Send At`, `Last Sent At`, `Stopped`, `Variant`). If a source tab's header row is invalid (for example a blank `Address` header), that tab is skipped and a warning is shown, rather than failing the whole dashboard.
+
+Additional tabs read by the dashboard:
+- `Email Activity`: per-recipient send log (historical opens).
+- `Listing Agents` (optional): agent referral program. Only aggregate counts are returned to the browser. Log agent outcomes in its `Status 2` column (`Partner – interested`, `Referral agreement signed`, `Referred owner`, `Not interested`, `Unsubscribe`).
+
+### Lead Disposition values
+
+The lead drawer can write `Bad Lead` or a reply outcome: `Interested`, `Call booked`, `Agreement signed`, `Already managed`, `Wants to sell`, `Self-managing`, `Not interested`, `Wrong person`, `Unsubscribe`. Any outcome stops the drip. `Interested`, `Call booked` and `Agreement signed` count as positive replies. Values written by Make (`Replied`, `In sequence`, `Completed`) are still read.
+
+### Outreach tracks
+
+Leads are assigned to action-plan tracks automatically (see `docs/marketing/`):
+- **T4:** Active listing. Owner email is paused.
+- **T3:** Withdrawn. Owner email is gated.
+- **T6:** No email.
+- **T5:** Entity or LLC owner.
+- **T1 / T2:** Expired / Cancelled.
+
+The checks run in that order, and the first match wins.
 
 ## Required Vercel environment variables
 

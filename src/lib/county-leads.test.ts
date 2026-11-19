@@ -3,7 +3,7 @@ import { buildCountySummaries, filterCountyLeads } from './county-leads';
 import type { RedactedLead } from './types';
 
 const lead = (overrides: Partial<RedactedLead>): RedactedLead => ({
-  id:'expired:2', firstName:'Kelly', address:'100 Main St', city:'Plano', state:'Texas', county:'Collin', listingStatus:'Expired', sourceKey:'expired', sourceLabel:'Expired Listings', dripStep:1, lastSentAt:null, nextSendAt:null, stopped:false, outcome:'', variant:'A', disposition:'', badLead:false, dueNow:false, completed:false, missingDetails:false, missingFields:[],
+  id:'expired:2', firstName:'Kelly', address:'100 Main St', city:'Plano', state:'Texas', county:'Collin', listingStatus:'Expired', sourceKey:'expired', sourceLabel:'Expired Listings', dripStep:1, lastSentAt:null, nextSendAt:null, stopped:false, outcome:'', variant:'A', disposition:'', badLead:false, dueNow:false, completed:false, missingDetails:false, missingFields:[], track:'T1', ownerEmailAllowed:true,
   ...overrides
 });
 

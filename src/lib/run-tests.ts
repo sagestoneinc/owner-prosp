@@ -13,4 +13,5 @@ import './lead-disposition.test';
 import './county-leads.test';
 import './responses.test';
 import './http-json.test';
+import './agent-referral.test';
 console.log('all local unit tests passed');
