@@ -32,3 +32,13 @@ assert.equal(mixed.rows.length, 2);
 assert.equal(mixed.warnings.length, 1);
 assert.match(mixed.warnings[0], /Active Listings was skipped: .*missing required header "Address"/);
 console.log('sheets mapping tests passed');
+
+// Active Listings tab has no "Status" column; rows must still load with columns shifted left.
+const noStatusHeaders = headers.filter(h => h !== 'Status');
+const noStatusRows = mapSheetRows('active', [['21257517','737 Santa Lucia Drive','Anna','Texas','75409','Collin','$2,350','Jessica Holmes','na','jessica@example.com','','','2','','','','B','','']], 2, noStatusHeaders);
+assert.equal(noStatusRows.length, 1);
+assert.equal(noStatusRows[0].listingStatus, '');
+assert.equal(noStatusRows[0].ownerRaw, 'Jessica Holmes');
+assert.equal(noStatusRows[0].county, 'Collin');
+assert.equal(noStatusRows[0].dripStep, 2);
+assert.equal(noStatusRows[0].variant, 'B');

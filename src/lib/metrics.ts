@@ -1,18 +1,22 @@
 import type { AgentReferralSummary, DashboardData, DayOfWeekPerformance, EmailActivityRow, MissingField, ProspectRow, RedactedLead, SenderPerformance, SourceKey, Track, TrackSummary } from './types';
 import { buildEmailTrackingMetrics } from './email-activity';
 import { dispositionCategory, isBadLeadDisposition, isPositiveDisposition, isReplyDisposition, isStopDisposition } from './lead-disposition';
+import { isBadLeadDisposition } from './lead-disposition';
+import { buildResponseMetrics, DEFAULT_WEEKLY_REPLY_GOAL } from './responses';
 
 export const DASHBOARD_TIMEZONE = 'America/New_York';
 
 const STEP_LABELS: Record<number, string> = {
   0: 'Not contacted', 1: 'Day 0 · Two numbers on the property', 2: 'Day 4 · The 11pm call',
-  3: 'Day 10 · A person, not a queue', 4: 'Day 18 · Already have a manager?', 5: 'Day 28 · Closing your file'
+  3: 'Day 10 · A person, not a ticket', 4: 'Day 18 · A second opinion', 5: 'Day 28 · Closing the file'
 };
 const STOP_REASON_RE = /(REPLIED|CONVERTED|UNSUBSCRIBED|UNSUBSCRIBE|STOP|DO NOT CONTACT|BOUNCED)/i;
 const REPLY_RE = /(REPLIED|CONVERTED)/i;
 const POSITIVE_STATUS_RE = /CONVERTED/i;
 // The streamlined Make automation (Oct 2026) records outcomes in Lead Disposition instead of Status 2.
 // Disposition classification (reply / positive / unsubscribe) lives in lead-disposition.ts.
+const REPLY_DISPOSITION_RE = /^(replied|interested|not interested|unsubscribed?)$/i;
+const STOP_DISPOSITION_RE = /^(replied|interested|not interested|unsubscribed?)$/i;
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as const;
 
 function localDateParts(date: Date) {
@@ -26,6 +30,8 @@ function weekStartKey(date: Date): string {
   const idx = weekdays.indexOf(weekday); const mondayOffset = idx === 0 ? -6 : 1 - idx; const localNoonUtc = new Date(Date.UTC(year, month - 1, day, 12));
   localNoonUtc.setUTCDate(localNoonUtc.getUTCDate() + mondayOffset); return localNoonUtc.toISOString().slice(0,10);
 }
+function shiftKey(key: string, days: number): string { const d = new Date(`${key}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0,10); }
+function weeklyGoal(): number { const n = Number.parseInt(process.env.WEEKLY_REPLY_GOAL || '', 10); return Number.isFinite(n) && n > 0 ? n : DEFAULT_WEEKLY_REPLY_GOAL; }
 function weekdayIndex(date: Date): number { const short = localDateParts(date).weekday; return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(short); }
 function isKnownReply(row: ProspectRow) { return REPLY_RE.test(row.status2 || '') || isReplyDisposition(row.disposition); }
 function isPositiveReply(row: ProspectRow) { return POSITIVE_STATUS_RE.test(row.status2 || '') || isPositiveDisposition(row.disposition); }
@@ -38,6 +44,8 @@ function emailsSentFromSteps(subset: ProspectRow[]) { return subset.reduce((sum,
 function prospectKey(sourceKey: SourceKey, rowNumber: number) { return `${sourceKey}:${rowNumber}`; }
 function activitySourceKey(source: string): SourceKey | null { const value=source.trim().toLowerCase(); if(value.startsWith('expired'))return'expired'; if(value.startsWith('withdrawn')||value.startsWith('cancelled'))return'withdrawn'; if(value.startsWith('active'))return'active'; return null; }
 function activityProspectKey(row: EmailActivityRow): string | null { const sourceKey=activitySourceKey(row.source); return sourceKey&&row.sourceRow>0?prospectKey(sourceKey,row.sourceRow):null; }
+/** Email is what the drip needs. A missing phone is noted but never makes a lead incomplete. */
+export function needsDetails(missing: MissingField[]): boolean { return missing.some(field => field !== 'phone'); }
 function missingFields(row: ProspectRow): MissingField[] {
   const missing: MissingField[] = [];
   if (!row.ownerRaw.trim() || row.firstName === 'Owner') missing.push('owner');
@@ -70,6 +78,7 @@ export function toRedactedLead(row: ProspectRow, now = new Date()): RedactedLead
   return { id:`${row.sourceKey}:${row.rowNumber}`, firstName:row.firstName, address:row.address, city:row.city, state:row.state, county:row.county, listingStatus:row.listingStatus,
     sourceKey:row.sourceKey, sourceLabel:row.sourceLabel, dripStep:row.dripStep, lastSentAt:row.lastSentAt?.toISOString() ?? null,
     nextSendAt:row.nextSendAt?.toISOString() ?? null, stopped:isStopped(row), outcome:row.status2, variant:row.variant, disposition:row.disposition, badLead, dueNow:isDue(row,now), completed:isCompleted(row), missingDetails:missing.length>0, missingFields:missing, track, ownerEmailAllowed:TRACK_DEFS[track].ownerEmailAllowed };
+    nextSendAt:row.nextSendAt?.toISOString() ?? null, stopped:isStopped(row), outcome:row.status2, variant:row.variant, disposition:row.disposition, badLead, dueNow:isDue(row,now), completed:isCompleted(row), missingDetails:needsDetails(missing), missingFields:missing };
 }
 
 function abReadout(variants: DashboardData['variants']): string {
@@ -133,4 +142,5 @@ export function buildDashboardData(rows: ProspectRow[], now = new Date(), emailA
     tracks:buildTrackSummaries(actionableRows),replyReasons:buildReplyReasons(actionableRows),
     compliance:{gatedContacted:gated.filter(r=>r.lastSentAt||r.dripStep>0).length,gatedDueNow:gated.filter(r=>isDue(r,now)).length},
     agents:extras.agents??null,warnings:extras.warnings??[]};
+  return {fetchedAt:now.toISOString(),timezone:DASHBOARD_TIMEZONE,headline:{totalProspects,withEmail,activeSequences,dueNow,sentToday,sentThisWeek,contacted:contactedRows.length,completed,stopped,badLeads,knownReplies,emailsSent:emailsSentFromSteps(rows),trackedOpens:tracking.trackedOpens,trackedOpenRate:tracking.trackedOpenRate,notOpened:tracking.notOpened,knownReplyRate:contactedRows.length?knownReplies/contactedRows.length:0},sequence,sources,variants,senderPerformance,dayOfWeekPerformance,abReadout:abReadout(variants),upcoming,recent,leads,dataQuality:{noEmail:actionableRows.filter(r=>r.emails.length===0).length,malformedDates:rows.reduce((sum,r)=>sum+r.malformedDateCount,0),companyOnlyOwners:actionableRows.filter(r=>r.firstName==='Owner').length},responses:buildResponseMetrics(actionableRows,{todayKey:today,weekStartKey:monday,lastWeekStartKey:shiftKey(monday,-7),toKey:dateKey,weeklyGoal:weeklyGoal()})};
 }

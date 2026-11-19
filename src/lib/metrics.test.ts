@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildDashboardData, toRedactedLead, trackOf } from './metrics';
+import { buildDashboardData, needsDetails, toRedactedLead } from './metrics';
 import { mapEmailActivityRows } from './email-activity';
 import type { ProspectRow } from './types';
 
@@ -120,3 +121,16 @@ assert.equal(outcomes.replyReasons.length, 6);
 assert.equal(outcomes.agents?.uniqueAgents, 2);
 assert.deepEqual(outcomes.warnings, ['x skipped']);
 console.log('metrics tests passed');
+
+// Email-first: a lead with an email but no phone is not incomplete and stays in the drip.
+assert.equal(needsDetails(['phone']), false);
+assert.equal(needsDetails(['email']), true);
+assert.equal(needsDetails(['phone', 'address']), true);
+{
+  const now = new Date('2026-11-20T15:00:00Z');
+  const emailOnly = toRedactedLead({ sourceKey:'expired', sourceLabel:'Expired Listings', rowNumber:97, mls:'1', address:'1 Main St', city:'Plano', state:'Texas', zipcode:'75023', county:'Collin', currentPrice:'', listingStatus:'Expired', ownerRaw:'Ola Adegbaju', firstName:'Ola', phone:'', emails:['ola@example.com'], firstContact:'', status2:'', dripStep:0, nextSendAt:null, lastSentAt:null, stoppedRaw:'', variant:'', disposition:'', malformedDateCount:0 }, now);
+  assert.equal(emailOnly.missingDetails, false);
+  assert.deepEqual(emailOnly.missingFields, ['phone']);
+  assert.equal(emailOnly.dueNow, true);
+}
+console.log('email-first lead tests passed');

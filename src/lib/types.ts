@@ -6,7 +6,7 @@ export interface TrackSummary { track:Track; label:string; ownerEmailAllowed:boo
 export interface AgentReferralSummary { listingRows:number; uniqueAgents:number; withEmail:number; contacted:number; interested:number; agreementsSigned:number; referredOwners:number; unsubscribed:number; multiListingAgents:number; topCounties:Array<{county:string;count:number}>; }
 
 export interface ProspectRow {
-  sourceKey: SourceKey; sourceLabel: string; rowNumber: number; mls: string; address: string; city: string; state: string; zipcode: string; county: string; currentPrice: string; listingStatus: string; ownerRaw: string; firstName: string; phone: string; emails: string[]; firstContact: string; status2: string; dripStep: number; nextSendAt: Date | null; lastSentAt: Date | null; stoppedRaw: string; variant: string; disposition: string; malformedDateCount: number;
+  sourceKey: SourceKey; sourceLabel: string; rowNumber: number; mls: string; address: string; city: string; state: string; zipcode: string; county: string; currentPrice: string; listingStatus: string; ownerRaw: string; firstName: string; phone: string; emails: string[]; firstContact: string; status2: string; dripStep: number; nextSendAt: Date | null; lastSentAt: Date | null; stoppedRaw: string; variant: string; disposition: string; skipReason?: string; malformedDateCount: number;
 }
 export interface EmailActivityRow { rowNumber:number; trackingId:string; source:string; sourceRow:number; mls:string; propertyAddress:string; recipientEmail:string; variant:string; dripStep:number; subject:string; zohoMessageId:string; sentAt:Date|null; validationState:string; opened:boolean; firstOpenedAt:Date|null; lastOpenedAt:Date|null; openCount:number; trackingType:string; notes:string; senderEmail:string; }
 export interface EmailTrackingMetrics { emailsSent:number; trackedOpens:number; notOpened:number; trackedOpenRate:number; byVariant:Record<'A'|'B',{emailsSent:number;trackedOpens:number;trackedOpenRate:number}>; }
@@ -17,6 +17,15 @@ export interface RedactedLead {
   id:string; firstName:string; address:string; city:string; state:string; county:string; listingStatus:string; sourceKey:SourceKey; sourceLabel:string; dripStep:number; lastSentAt:string|null; nextSendAt:string|null; stopped:boolean; outcome:string; variant:string; disposition:string; badLead:boolean; dueNow:boolean; completed:boolean; missingDetails:boolean; missingFields:MissingField[]; hasEmail?:boolean; track:Track; ownerEmailAllowed:boolean;
 }
 export interface FullLead extends RedactedLead { mls:string; zipcode:string; currentPrice:string; ownerRaw:string; phone:string; emails:string[]; firstContact:string; }
+export interface ResponseCohort { contacted:number; replies:number; replyRate:number; }
+export interface ResponseMetrics {
+  launchDate:string;
+  goal:{ weeklyTarget:number; thisWeek:number; lastWeek:number; progress:number };
+  byStep:Array<{ step:number; label:string; reached:number; replies:number; replyRate:number }>;
+  types:Array<{ type:string; count:number }>;
+  copy:{ newCopy:ResponseCohort; oldCopy:ResponseCohort };
+  undatedReplies:number;
+}
 export interface DashboardData {
   fetchedAt:string; timezone:string;
   headline:{ positiveReplies:number; callsBooked:number; agreementsSigned:number; positiveReplyRate:number; totalProspects:number; withEmail:number; activeSequences:number; dueNow:number; sentToday:number; sentThisWeek:number; contacted:number; completed:number; stopped:number; badLeads:number; knownReplies:number; emailsSent:number; trackedOpens:number; trackedOpenRate:number; notOpened:number; knownReplyRate:number; };
@@ -28,4 +37,5 @@ export interface DashboardData {
   tracks:TrackSummary[]; replyReasons:Array<{reason:string;count:number}>;
   compliance:{gatedContacted:number;gatedDueNow:number};
   agents:AgentReferralSummary|null; warnings:string[];
+  responses:ResponseMetrics;
 }

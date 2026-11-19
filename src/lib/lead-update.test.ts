@@ -18,3 +18,8 @@ const movedSchema = buildSheetSchema('Moved', movedHeaders);
 const moved = buildLeadUpdateRanges(movedSchema, 'Moved', 22, { phone:'555-1212', emails:'a@example.com' });
 assert.deepEqual(moved.map(x=>x.range), ["'Moved'!K22", "'Moved'!J22"]);
 console.log('lead update tests passed');
+
+// Editing a lead on a tab without "Status" skips that field instead of failing.
+const noStatusSchema = buildSheetSchema('Active Listings', headers.filter(h => h !== 'Status'));
+const noStatusRanges = buildLeadUpdateRanges(noStatusSchema, 'Active Listings', 3, { listingStatus: 'Active', ownerRaw: 'Jane Doe' });
+assert.deepEqual(noStatusRanges, [{ range: "'Active Listings'!H3", values: [['Jane Doe']] }]);
