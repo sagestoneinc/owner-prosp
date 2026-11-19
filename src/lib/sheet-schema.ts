@@ -4,6 +4,10 @@ export const REQUIRED_LEAD_HEADERS = [
 
 export type LeadHeader = typeof REQUIRED_LEAD_HEADERS[number];
 
+// Columns some tabs don't have (e.g. Active Listings has no "Status" column).
+// A missing optional column reads as blank and is skipped on writes.
+export const OPTIONAL_LEAD_HEADERS: ReadonlySet<LeadHeader> = new Set<LeadHeader>(['Status']);
+
 function normalizeHeader(value: unknown): string {
   return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
@@ -21,6 +25,8 @@ export function columnLetter(index: number): string {
 }
 
 export interface SheetSchema {
+  has(header: LeadHeader): boolean;
+  /** Column index, or -1 when an optional header is absent. */
   indexOf(header: LeadHeader): number;
   columnOf(header: LeadHeader): string;
 }
@@ -34,11 +40,18 @@ export function buildSheetSchema(sheetTitle: string, headers: unknown[]): SheetS
   });
   for (const header of REQUIRED_LEAD_HEADERS) {
     const indexes = positions.get(normalizeHeader(header)) ?? [];
+    if (indexes.length === 0 && OPTIONAL_LEAD_HEADERS.has(header)) continue;
     if (indexes.length === 0) throw new Error(`${sheetTitle} is missing required header "${header}".`);
     if (indexes.length > 1) throw new Error(`${sheetTitle} has duplicate header "${header}".`);
   }
+  const find = (header: LeadHeader) => positions.get(normalizeHeader(header))?.[0] ?? -1;
   return {
-    indexOf(header) { return positions.get(normalizeHeader(header))![0]; },
-    columnOf(header) { return columnLetter(positions.get(normalizeHeader(header))![0]); }
+    has(header) { return find(header) >= 0; },
+    indexOf(header) { return find(header); },
+    columnOf(header) {
+      const index = find(header);
+      if (index < 0) throw new Error(`${sheetTitle} has no "${header}" column.`);
+      return columnLetter(index);
+    }
   };
 }

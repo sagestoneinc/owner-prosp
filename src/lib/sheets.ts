@@ -17,7 +17,7 @@ export const SOURCE_TABS: Record<SourceKey, { title: string; label: string }> = 
   active: { title: 'Active Listings', label: 'Active Listings' }
 };
 
-function cell(row: unknown[], index: number): string { const value=row[index]; return value==null?'':String(value); }
+function cell(row: unknown[], index: number): string { if(index<0)return''; const value=row[index]; return value==null?'':String(value); }
 function parseDateWithQuality(value: unknown): { date: Date | null; malformed: number } { if(value==null||value==='')return{date:null,malformed:0}; const date=parseSheetDate(value); return{date,malformed:date?0:1}; }
 
 export function mapSheetRows(sourceKey: SourceKey, values: unknown[][], startRow = 2, headers: unknown[] = [...REQUIRED_LEAD_HEADERS]): ProspectRow[] {
