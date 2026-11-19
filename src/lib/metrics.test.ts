@@ -106,7 +106,7 @@ const outcomes = buildDashboardData([
   base({ rowNumber: 25, dripStep: 1, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'Replied' }),
   base({ rowNumber: 26, dripStep: 1, lastSentAt: new Date('2026-08-22T14:00:00Z'), disposition: 'In sequence', nextSendAt: new Date('2026-08-23T13:00:00Z') }),
   base({ rowNumber: 27, sourceKey: 'active', sourceLabel: 'Active Listings', dripStep: 1, lastSentAt: new Date('2026-08-20T14:00:00Z'), nextSendAt: new Date('2026-08-23T13:00:00Z') })
-], now, [], { agents: { listingRows: 3, uniqueAgents: 2, withEmail: 2, contacted: 1, interested: 1, agreementsSigned: 0, referredOwners: 0, unsubscribed: 0, multiListingAgents: 1, topCounties: [] }, warnings: ['x skipped'] });
+], now, [], { agents: { listingRows: 3, uniqueAgents: 2, withEmail: 2, contacted: 1, interested: 1, agreementsSigned: 0, referredOwners: 0, unsubscribed: 0, multiListingAgents: 1, drip: { eligible: 0, emailed: 0, inSequence: 0, completed: 0, replied: 0, invalidEmail: 0, emailsSent: 0 }, topCounties: [] }, warnings: ['x skipped'] });
 assert.equal(outcomes.headline.positiveReplies, 3);
 assert.equal(outcomes.headline.callsBooked, 2);
 assert.equal(outcomes.headline.agreementsSigned, 1);

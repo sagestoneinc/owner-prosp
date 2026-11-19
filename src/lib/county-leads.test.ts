@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildCountySummaries, filterCountyLeads } from './county-leads';
+import { buildCountySummaries, filterCountyLeads, incompleteCountyOptions } from './county-leads';
 import type { RedactedLead } from './types';
 
 const lead = (overrides: Partial<RedactedLead>): RedactedLead => ({
@@ -24,5 +24,12 @@ assert.equal(summaries.find(x=>x.county==='Dallas')?.badLeads, 1);
 assert.deepEqual(filterCountyLeads(leads,{county:'Collin',state:'all',query:'',sort:'owner'}).map(x=>x.id), ['active:3','expired:2']);
 assert.deepEqual(filterCountyLeads(leads,{county:'Dallas',state:'bad',query:'',sort:'property'}).map(x=>x.id), ['withdrawn:4']);
 assert.deepEqual(filterCountyLeads(leads,{county:'Unknown',state:'all',query:'',sort:'owner'}).map(x=>x.id), ['expired:6']);
+
+const incomplete = [
+  lead({ id:'a', county:'Collin', missingDetails:true }), lead({ id:'b', county:'Collin', missingDetails:true }),
+  lead({ id:'c', county:'Dallas', missingDetails:true }), lead({ id:'d', county:'', missingDetails:true }),
+  lead({ id:'e', county:'Dallas', missingDetails:true, badLead:true }), lead({ id:'f', county:'Harris', missingDetails:false })
+];
+assert.deepEqual(incompleteCountyOptions(incomplete), [{ county:'Collin', count:2 }, { county:'Dallas', count:1 }, { county:'Unknown', count:1 }]);
 
 console.log('county leads tests passed');

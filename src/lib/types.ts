@@ -3,7 +3,9 @@ export type MissingField = 'owner' | 'email' | 'phone' | 'address';
 /** Outreach tracks from the Marketing & Sales action plan (T7 agent referral lives in AgentReferralSummary). */
 export type Track = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6';
 export interface TrackSummary { track:Track; label:string; ownerEmailAllowed:boolean; gate:string|null; total:number; withEmail:number; contacted:number; knownReplies:number; positiveReplies:number; }
-export interface AgentReferralSummary { listingRows:number; uniqueAgents:number; withEmail:number; contacted:number; interested:number; agreementsSigned:number; referredOwners:number; unsubscribed:number; multiListingAgents:number; topCounties:Array<{county:string;count:number}>; }
+/** Agent referral email drip (Make writes Drip Step, Stopped and Skip Reason on the Listing Agents tab). */
+export interface AgentDripSummary { eligible:number; emailed:number; inSequence:number; completed:number; replied:number; invalidEmail:number; emailsSent:number; }
+export interface AgentReferralSummary { listingRows:number; uniqueAgents:number; withEmail:number; contacted:number; interested:number; agreementsSigned:number; referredOwners:number; unsubscribed:number; multiListingAgents:number; drip:AgentDripSummary; topCounties:Array<{county:string;count:number}>; }
 
 export interface ProspectRow {
   sourceKey: SourceKey; sourceLabel: string; rowNumber: number; mls: string; address: string; city: string; state: string; zipcode: string; county: string; currentPrice: string; listingStatus: string; ownerRaw: string; firstName: string; phone: string; emails: string[]; firstContact: string; status2: string; dripStep: number; nextSendAt: Date | null; lastSentAt: Date | null; stoppedRaw: string; variant: string; disposition: string; skipReason?: string; malformedDateCount: number;

@@ -12,7 +12,7 @@ export interface CountySummary {
   badLeads: number;
 }
 
-function countyName(lead: RedactedLead): string {
+export function countyName(lead: RedactedLead): string {
   return lead.county.trim() || 'Unknown';
 }
 
@@ -49,4 +49,15 @@ export function filterCountyLeads(leads: RedactedLead[], options: { county:strin
       if (options.sort === 'source') return a.sourceKey.localeCompare(b.sourceKey) || a.firstName.localeCompare(b.firstName) || a.id.localeCompare(b.id);
       return a.firstName.localeCompare(b.firstName) || (a.address || '').localeCompare(b.address || '') || a.id.localeCompare(b.id);
     });
+}
+
+/** Counties that have incomplete (non-bad) leads, largest first, for the Incomplete Leads filter. */
+export function incompleteCountyOptions(leads: RedactedLead[]): Array<{ county: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const lead of leads) {
+    if (lead.badLead || !lead.missingDetails) continue;
+    const county = countyName(lead);
+    counts.set(county, (counts.get(county) ?? 0) + 1);
+  }
+  return Array.from(counts, ([county, count]) => ({ county, count })).sort((a, b) => b.count - a.count || a.county.localeCompare(b.county));
 }

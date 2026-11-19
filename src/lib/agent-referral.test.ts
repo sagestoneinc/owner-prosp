@@ -27,4 +27,16 @@ assert.ok(!JSON.stringify(summary).includes('Pat Lee'));
 // Missing optional columns must not throw.
 const sparse = mapAgentRows(['Listing Agent'], [['Only Name']]);
 assert.equal(buildAgentReferralSummary(sparse).uniqueAgents, 1);
+// Drip columns written by the Make referral scenario.
+const dripHeaders = [...headers, 'Drip Step', 'Next Send At', 'Last Sent At', 'Stopped', 'Skip Reason', 'Send To', 'Eligible'];
+const drip = buildAgentReferralSummary(mapAgentRows(dripHeaders, [
+  ['1','1 A St','Collin','','Closed','Pat Lee','','Office One','pat@example.com','','','2','2026-12-01','2026-11-20','','In sequence','pat@example.com','Yes'],
+  ['2','2 B St','Collin','','Closed','Pat Lee','','Office One','pat@example.com','','','','','','','','pat@example.com','Duplicate'],
+  ['3','3 C St','Dallas','','Closed','Ana Diaz','','Office Two','ana@example.com','','Replied','1','','2026-11-20','Yes','Reply received 2026-11-25, drip stopped','ana@example.com','Yes'],
+  ['4','4 D St','Dallas','','Closed','Lee Wu','','Office Three','lee@example.com','','','4','','2026-12-20','Yes','Completed','lee@example.com','Yes'],
+  ['5','5 E St','Harris','','Closed','Bo Kim','','Office Four','bo@bad','','','','','','Yes','Invalid email: bo@bad (Reoon: invalid)','bo@bad','Yes'],
+  ['6','6 F St','Harris','','Closed','Cy Fox','','Builder Homes','cy@builder.com','','','','','','','','cy@builder.com','Builder']
+]));
+assert.deepEqual(drip.drip, { eligible: 4, emailed: 3, inSequence: 1, completed: 1, replied: 1, invalidEmail: 1, emailsSent: 7 });
+assert.equal(drip.contacted, 3);
 console.log('agent referral tests passed');
