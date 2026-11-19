@@ -1,18 +1,19 @@
 import type { DashboardData, DayOfWeekPerformance, EmailActivityRow, MissingField, ProspectRow, RedactedLead, SenderPerformance, SourceKey } from './types';
 import { buildEmailTrackingMetrics } from './email-activity';
 import { isBadLeadDisposition } from './lead-disposition';
+import { buildResponseMetrics, DEFAULT_WEEKLY_REPLY_GOAL } from './responses';
 
 export const DASHBOARD_TIMEZONE = 'America/New_York';
 
 const STEP_LABELS: Record<number, string> = {
   0: 'Not contacted', 1: 'Day 0 · Two numbers on the property', 2: 'Day 4 · The 11pm call',
-  3: 'Day 10 · A person, not a queue', 4: 'Day 18 · Already have a manager?', 5: 'Day 28 · Closing your file'
+  3: 'Day 10 · A person, not a ticket', 4: 'Day 18 · A second opinion', 5: 'Day 28 · Closing the file'
 };
 const STOP_REASON_RE = /(REPLIED|CONVERTED|UNSUBSCRIBED|UNSUBSCRIBE|STOP|DO NOT CONTACT|BOUNCED)/i;
 const REPLY_RE = /(REPLIED|CONVERTED)/i;
 // The streamlined Make automation (Oct 2026) records outcomes in Lead Disposition instead of Status 2.
-const REPLY_DISPOSITION_RE = /^(replied|interested|not interested)$/i;
-const STOP_DISPOSITION_RE = /^(replied|interested|not interested)$/i;
+const REPLY_DISPOSITION_RE = /^(replied|interested|not interested|unsubscribed?)$/i;
+const STOP_DISPOSITION_RE = /^(replied|interested|not interested|unsubscribed?)$/i;
 const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as const;
 
 function localDateParts(date: Date) {
@@ -26,6 +27,8 @@ function weekStartKey(date: Date): string {
   const idx = weekdays.indexOf(weekday); const mondayOffset = idx === 0 ? -6 : 1 - idx; const localNoonUtc = new Date(Date.UTC(year, month - 1, day, 12));
   localNoonUtc.setUTCDate(localNoonUtc.getUTCDate() + mondayOffset); return localNoonUtc.toISOString().slice(0,10);
 }
+function shiftKey(key: string, days: number): string { const d = new Date(`${key}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0,10); }
+function weeklyGoal(): number { const n = Number.parseInt(process.env.WEEKLY_REPLY_GOAL || '', 10); return Number.isFinite(n) && n > 0 ? n : DEFAULT_WEEKLY_REPLY_GOAL; }
 function weekdayIndex(date: Date): number { const short = localDateParts(date).weekday; return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(short); }
 function isKnownReply(row: ProspectRow) { return REPLY_RE.test(row.status2 || '') || REPLY_DISPOSITION_RE.test((row.disposition || '').trim()); }
 function isCompleted(row: ProspectRow) { return row.dripStep >= 5; }
@@ -86,5 +89,5 @@ export function buildDashboardData(rows: ProspectRow[], now = new Date(), emailA
   const senderPerformance=buildSenderPerformance(actionableRows,emailActivity); const dayOfWeekPerformance=buildDayOfWeekPerformance(actionableRows,emailActivity); const leads=rows.map(r=>toRedactedLead(r,now));
   const upcoming=actionableRows.filter(r=>isActive(r)&&r.nextSendAt&&r.nextSendAt.getTime()>=now.getTime()).sort((a,b)=>a.nextSendAt!.getTime()-b.nextSendAt!.getTime()).slice(0,15).map(r=>toRedactedLead(r,now));
   const recent=rows.filter(r=>!!r.lastSentAt).sort((a,b)=>b.lastSentAt!.getTime()-a.lastSentAt!.getTime()).slice(0,15).map(r=>toRedactedLead(r,now));
-  return {fetchedAt:now.toISOString(),timezone:DASHBOARD_TIMEZONE,headline:{totalProspects,withEmail,activeSequences,dueNow,sentToday,sentThisWeek,contacted:contactedRows.length,completed,stopped,badLeads,knownReplies,emailsSent:emailsSentFromSteps(rows),trackedOpens:tracking.trackedOpens,trackedOpenRate:tracking.trackedOpenRate,notOpened:tracking.notOpened,knownReplyRate:contactedRows.length?knownReplies/contactedRows.length:0},sequence,sources,variants,senderPerformance,dayOfWeekPerformance,abReadout:abReadout(variants),upcoming,recent,leads,dataQuality:{noEmail:actionableRows.filter(r=>r.emails.length===0).length,malformedDates:rows.reduce((sum,r)=>sum+r.malformedDateCount,0),companyOnlyOwners:actionableRows.filter(r=>r.firstName==='Owner').length}};
+  return {fetchedAt:now.toISOString(),timezone:DASHBOARD_TIMEZONE,headline:{totalProspects,withEmail,activeSequences,dueNow,sentToday,sentThisWeek,contacted:contactedRows.length,completed,stopped,badLeads,knownReplies,emailsSent:emailsSentFromSteps(rows),trackedOpens:tracking.trackedOpens,trackedOpenRate:tracking.trackedOpenRate,notOpened:tracking.notOpened,knownReplyRate:contactedRows.length?knownReplies/contactedRows.length:0},sequence,sources,variants,senderPerformance,dayOfWeekPerformance,abReadout:abReadout(variants),upcoming,recent,leads,dataQuality:{noEmail:actionableRows.filter(r=>r.emails.length===0).length,malformedDates:rows.reduce((sum,r)=>sum+r.malformedDateCount,0),companyOnlyOwners:actionableRows.filter(r=>r.firstName==='Owner').length},responses:buildResponseMetrics(actionableRows,{todayKey:today,weekStartKey:monday,lastWeekStartKey:shiftKey(monday,-7),toKey:dateKey,weeklyGoal:weeklyGoal()})};
 }

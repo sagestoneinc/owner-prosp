@@ -33,7 +33,7 @@ export function mapSheetRows(sourceKey: SourceKey, values: unknown[][], startRow
       mls:at(row,'MLS #'),address:cleanAddress(at(row,'Address')),city:cleanAddress(at(row,'City')),state:cleanAddress(at(row,'State')),zipcode:at(row,'Zipcode').trim(),county:cleanAddress(at(row,'County')),currentPrice:at(row,'Current Price').trim(),listingStatus:cleanAddress(at(row,'Status')),
       ownerRaw,firstName:displayFirstName(ownerRaw),phone:at(row,'Phone Number').trim(),emails:normalizeEmailCell(at(row,'Email')),
       firstContact:at(row,'First Contact').trim(),status2:at(row,'Status 2').trim(),dripStep:Math.max(0,Math.min(5,Number.parseInt(at(row,'Drip Step'),10)||0)),
-      nextSendAt:next.date,lastSentAt:last.date,stoppedRaw:at(row,'Stopped').trim(),variant:at(row,'Variant').trim().toUpperCase(),disposition:at(row,'Lead Disposition').trim(),malformedDateCount:next.malformed+last.malformed
+      nextSendAt:next.date,lastSentAt:last.date,stoppedRaw:at(row,'Stopped').trim(),variant:at(row,'Variant').trim().toUpperCase(),disposition:at(row,'Lead Disposition').trim(),skipReason:at(row,'Skip Reason').trim(),malformedDateCount:next.malformed+last.malformed
     } satisfies ProspectRow;
   }).filter(row=>Boolean(row.mls||row.address||row.ownerRaw||row.phone||row.emails.length||row.listingStatus||row.dripStep||row.lastSentAt||row.nextSendAt||row.disposition));
 }
