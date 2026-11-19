@@ -40,6 +40,8 @@ function emailsSentFromSteps(subset: ProspectRow[]) { return subset.reduce((sum,
 function prospectKey(sourceKey: SourceKey, rowNumber: number) { return `${sourceKey}:${rowNumber}`; }
 function activitySourceKey(source: string): SourceKey | null { const value=source.trim().toLowerCase(); if(value.startsWith('expired'))return'expired'; if(value.startsWith('withdrawn')||value.startsWith('cancelled'))return'withdrawn'; if(value.startsWith('active'))return'active'; return null; }
 function activityProspectKey(row: EmailActivityRow): string | null { const sourceKey=activitySourceKey(row.source); return sourceKey&&row.sourceRow>0?prospectKey(sourceKey,row.sourceRow):null; }
+/** Email is what the drip needs. A missing phone is noted but never makes a lead incomplete. */
+export function needsDetails(missing: MissingField[]): boolean { return missing.some(field => field !== 'phone'); }
 function missingFields(row: ProspectRow): MissingField[] {
   const missing: MissingField[] = [];
   if (!row.ownerRaw.trim() || row.firstName === 'Owner') missing.push('owner');
@@ -53,7 +55,7 @@ export function toRedactedLead(row: ProspectRow, now = new Date()): RedactedLead
   const missing = missingFields(row); const badLead=isBadLead(row);
   return { id:`${row.sourceKey}:${row.rowNumber}`, firstName:row.firstName, address:row.address, city:row.city, state:row.state, county:row.county, listingStatus:row.listingStatus,
     sourceKey:row.sourceKey, sourceLabel:row.sourceLabel, dripStep:row.dripStep, lastSentAt:row.lastSentAt?.toISOString() ?? null,
-    nextSendAt:row.nextSendAt?.toISOString() ?? null, stopped:isStopped(row), outcome:row.status2, variant:row.variant, disposition:row.disposition, badLead, dueNow:isDue(row,now), completed:isCompleted(row), missingDetails:missing.length>0, missingFields:missing };
+    nextSendAt:row.nextSendAt?.toISOString() ?? null, stopped:isStopped(row), outcome:row.status2, variant:row.variant, disposition:row.disposition, badLead, dueNow:isDue(row,now), completed:isCompleted(row), missingDetails:needsDetails(missing), missingFields:missing };
 }
 
 function abReadout(variants: DashboardData['variants']): string {
