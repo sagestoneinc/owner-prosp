@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildDashboardData, toRedactedLead, trackOf } from './metrics';
-import { buildDashboardData, needsDetails, toRedactedLead } from './metrics';
+import { buildDashboardData, needsDetails, toRedactedLead, trackOf } from './metrics';
 import { mapEmailActivityRows } from './email-activity';
 import type { ProspectRow } from './types';
 
