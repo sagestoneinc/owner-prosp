@@ -50,3 +50,18 @@ export function filterCountyLeads(leads: RedactedLead[], options: { county:strin
       return a.firstName.localeCompare(b.firstName) || (a.address || '').localeCompare(b.address || '') || a.id.localeCompare(b.id);
     });
 }
+
+/** County options for the incomplete-leads queue: one entry per county with a count of incomplete, non-bad leads, largest first. */
+export function incompleteCountyOptions(leads: RedactedLead[]): Array<{ county: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const lead of leads) {
+    if (!lead.missingDetails || lead.badLead) continue;
+    const county = countyName(lead);
+    counts.set(county, (counts.get(county) ?? 0) + 1);
+  }
+  return Array.from(counts.entries()).map(([county, count]) => ({ county, count })).sort((a, b) => b.count - a.count || a.county.localeCompare(b.county));
+}
+
+export function matchesCounty(lead: RedactedLead, county: string): boolean {
+  return county === 'all' || countyName(lead) === county;
+}
