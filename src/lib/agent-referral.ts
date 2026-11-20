@@ -12,6 +12,10 @@ export interface AgentRow {
   emails: string[];
   firstContact: string;
   status2: string;
+  dripStep: number;
+  stopped: boolean;
+  skipReason: string;
+  eligible: string;
 }
 
 function normalizeHeader(value: unknown): string { return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase(); }
@@ -32,7 +36,11 @@ export function mapAgentRows(headers: unknown[], values: unknown[][], startRow =
     status: cleanAddress(at(row, 'status')),
     emails: normalizeEmailCell(at(row, 'email')),
     firstContact: at(row, 'first contact').trim(),
-    status2: at(row, 'status 2').trim()
+    status2: at(row, 'status 2').trim(),
+    dripStep: Math.max(0, Number.parseInt(at(row, 'drip step'), 10) || 0),
+    stopped: /^yes$/i.test(at(row, 'stopped').trim()),
+    skipReason: at(row, 'skip reason').trim(),
+    eligible: at(row, 'eligible').trim()
   })).filter(row => Boolean(row.agent || row.emails.length));
 }
 
@@ -58,12 +66,21 @@ export function buildAgentReferralSummary(rows: AgentRow[]): AgentReferralSummar
     listingRows: rows.length,
     uniqueAgents: groups.length,
     withEmail: groups.filter(g => any(g, r => r.emails.length > 0)).length,
-    contacted: groups.filter(g => any(g, r => Boolean(r.firstContact || r.status2))).length,
+    contacted: groups.filter(g => any(g, r => Boolean(r.firstContact || r.status2 || r.dripStep > 0))).length,
     interested: groups.filter(g => any(g, r => INTERESTED_RE.test(r.status2) && !NOT_INTERESTED_RE.test(r.status2))).length,
     agreementsSigned: groups.filter(g => any(g, r => SIGNED_RE.test(r.status2))).length,
     referredOwners: rows.filter(r => REFERRED_RE.test(r.status2)).length,
     unsubscribed: groups.filter(g => any(g, r => UNSUBSCRIBE_RE.test(r.status2))).length,
     multiListingAgents: groups.filter(g => g.length > 1).length,
+    drip: {
+      eligible: rows.filter(r => /^yes$/i.test(r.eligible)).length,
+      emailed: rows.filter(r => r.dripStep > 0).length,
+      inSequence: rows.filter(r => r.dripStep > 0 && !r.stopped).length,
+      completed: rows.filter(r => /^completed$/i.test(r.skipReason)).length,
+      replied: rows.filter(r => /^replied$/i.test(r.status2) || /^reply received/i.test(r.skipReason)).length,
+      badEmail: rows.filter(r => /^email failed check/i.test(r.skipReason)).length,
+      emailsSent: rows.reduce((sum, r) => sum + r.dripStep, 0)
+    },
     topCounties: Array.from(counties.entries()).map(([county, count]) => ({ county, count })).sort((a, b) => b.count - a.count || a.county.localeCompare(b.county)).slice(0, 6)
   };
 }

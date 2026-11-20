@@ -73,7 +73,7 @@ export async function fetchSourceRowsWithWarnings():Promise<{rows:ProspectRow[];
 
 /** Reads the Listing Agents tab and returns aggregate counts only (no agent PII leaves the server). */
 export async function fetchAgentReferralSummary():Promise<AgentReferralSummary> {
-  const sid=encodeURIComponent(spreadsheetId()); const range=encodeURIComponent(`'${LISTING_AGENTS_TAB}'!A1:K`);
+  const sid=encodeURIComponent(spreadsheetId()); const range=encodeURIComponent(`'${LISTING_AGENTS_TAB}'!A1:R`);
   const json=await googleJson(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`) as {values?:unknown[][]};
   const values=json.values??[]; return buildAgentReferralSummary(mapAgentRows(values[0]??[],values.slice(1),2));
 }
